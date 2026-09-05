@@ -18,3 +18,26 @@ export const serverClient = createClient({
   token: process.env.SANITY_API_READ_TOKEN,
   perspective: 'published',
 })
+
+/**
+ * Cached fetch helper for Sanity data using Next.js ISR (Incremental Static Regeneration).
+ * Configured with default 5-minute (300s) revalidation and tag-based cache invalidation.
+ */
+export async function sanityFetch<T = any>({
+  query,
+  params = {},
+  revalidate = 300,
+  tags = [],
+}: {
+  query: string;
+  params?: Record<string, any>;
+  revalidate?: number | false;
+  tags?: string[];
+}): Promise<T> {
+  return serverClient.fetch(query, params, {
+    next: {
+      revalidate,
+      tags,
+    },
+  });
+}
