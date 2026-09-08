@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import posthog from "posthog-js";
 import { formatDuration } from "@/lib/utils/format";
 import { type CurriculumLesson, type CurriculumModule } from "@/lib/utils/curriculum";
@@ -10,9 +10,10 @@ import { type CurriculumLesson, type CurriculumModule } from "@/lib/utils/curric
 interface LessonFooterNavProps {
   prevLesson?: { lesson: CurriculumLesson; module: CurriculumModule } | null;
   nextLesson?: { lesson: CurriculumLesson; module: CurriculumModule } | null;
+  courseSlug?: string;
 }
 
-export function LessonFooterNav({ prevLesson, nextLesson }: LessonFooterNavProps) {
+export function LessonFooterNav({ prevLesson, nextLesson, courseSlug }: LessonFooterNavProps) {
   return (
     <div className="mt-14 pt-8 border-t border-neutral-200/80 dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-6">
       {/* Previous Lesson */}
@@ -69,6 +70,16 @@ export function LessonFooterNav({ prevLesson, nextLesson }: LessonFooterNavProps
           >
             <span>Next Lesson</span>
             <ArrowRight className="h-4 w-4" strokeWidth={2} />
+          </Link>
+        </div>
+      ) : courseSlug ? (
+        <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
+          <Link
+            href={`/courses/${courseSlug}`}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 dark:bg-emerald-700 px-6 py-3 text-sm font-medium text-white shadow-md shadow-emerald-500/20 hover:bg-emerald-700 dark:hover:bg-emerald-600 hover:shadow-lg transition-all cursor-pointer shrink-0"
+          >
+            <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
+            <span>Course Overview</span>
           </Link>
         </div>
       ) : (

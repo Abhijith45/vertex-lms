@@ -1,5 +1,6 @@
 import React from "react";
 import { notFound } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
 import { Navbar } from "@/components/layout/navbar";
 import { CourseHero } from "@/components/course/course-hero";
 import { CourseViewTracker } from "@/components/course/course-view-tracker";
@@ -7,6 +8,7 @@ import { WhatYoullLearn } from "@/components/course/what-youll-learn";
 import { CourseContentAccordion, type ModuleItem } from "@/components/course/course-content-accordion";
 import { StickyCourseProgress } from "@/components/course/sticky-course-progress";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
+import { Footer } from "@/components/layout/footer";
 import { sanityFetch } from "@/sanity/lib/client";
 import { getCourseBySlugQuery } from "@/sanity/lib/queries";
 import { formatDuration } from "@/lib/utils/format";
@@ -217,9 +219,101 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
     allLessons[0]?.slug?.current ||
     "nextjs-app-router-in-depth-file-system-routing";
 
-  const continueLearningUrl = firstLessonSlug
+  const defaultFirstLessonUrl = firstLessonSlug
     ? `/lessons/${typeof firstLessonSlug === "object" ? firstLessonSlug.current : firstLessonSlug}`
     : "#";
+
+  let continueLearningUrl = defaultFirstLessonUrl;
+  let progressPercentage = 0;
+  let isBookmarked = false;
+  const completedLessonIdList: string[] = [];
+
+  // Fetch progress if authenticated
+  try {
+    const authData = await auth();
+    const userId = authData?.userId;
+    
+    if (userId) {
+      const progressDoc = await sanityFetch({
+        query: `*[_type == "progress" && clerkUserId == $userId][0] { 
+          completedLessons[]->{ _id, "slug": slug.current },
+          resumePositions[]{
+            positionSeconds,
+            lesson->{ _id, "slug": slug.current }
+          },
+          "bookmarkedCourseIds": coalesce(bookmarkedCourses[]->_id, [])
+        }`,
+        params: { userId },
+        tags: [`progress-${userId}`, `bookmarks-${userId}`],
+        revalidate: 0,
+      }) as any;
+      
+      if (progressDoc) {
+        if (progressDoc.bookmarkedCourseIds?.includes(course._id)) {
+          isBookmarked = true;
+        }
+        const completedLessonIds = new Set<string>(
+          (progressDoc.completedLessons || [])
+            .map((l: any) => l?._id)
+            .filter(Boolean)
+        );
+        completedLessonIdList.push(...Array.from(completedLessonIds));
+
+        // Map resume positions by lesson ID
+        const resumeMap = new Map<string, { slug: string; positionSeconds: number }>();
+        for (const r of progressDoc.resumePositions || []) {
+          if (r?.lesson?._id && r?.lesson?.slug) {
+            resumeMap.set(r.lesson._id, {
+              slug: r.lesson.slug,
+              positionSeconds: r.positionSeconds || 0,
+            });
+          }
+        }
+
+        const courseLessons = displayedModules.flatMap((m: any) => m.lessons || []).filter(Boolean);
+        const courseLessonIds = courseLessons.map((l: any) => l._id).filter(Boolean);
+
+        if (courseLessonIds.length > 0) {
+          let completedInCourse = 0;
+          for (const id of courseLessonIds) {
+            if (completedLessonIds.has(id)) {
+              completedInCourse++;
+            }
+          }
+          progressPercentage = Math.round((completedInCourse / courseLessonIds.length) * 100);
+
+          // Determine true continueLearningUrl:
+          // 1. Check if user paused any lesson in this course
+          let targetLesson: { slug: string; positionSeconds: number } | null = null;
+          for (const l of courseLessons) {
+            if (l._id && resumeMap.has(l._id)) {
+              targetLesson = resumeMap.get(l._id)!;
+              break;
+            }
+          }
+
+          // 2. If no paused timestamp but user completed some lessons, target the next uncompleted lesson
+          if (!targetLesson && completedInCourse > 0 && completedInCourse < courseLessons.length) {
+            const nextUncompleted = courseLessons.find((l: any) => l._id && !completedLessonIds.has(l._id));
+            if (nextUncompleted) {
+              const slugStr = typeof nextUncompleted.slug === "object" ? nextUncompleted.slug.current : nextUncompleted.slug;
+              if (slugStr) {
+                targetLesson = { slug: slugStr, positionSeconds: 0 };
+              }
+            }
+          }
+
+          if (targetLesson) {
+            continueLearningUrl = `/lessons/${targetLesson.slug}${
+              targetLesson.positionSeconds > 0 ? `?start=${targetLesson.positionSeconds}` : ""
+            }`;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error fetching progress:", e);
+  }
 
   return (
     <div className="min-h-screen w-full bg-[#FAF9F6] dark:bg-[#090D16] font-sans text-neutral-900 dark:text-neutral-100 selection:bg-primary-100 selection:text-primary-500 relative transition-colors duration-200">
@@ -250,6 +344,8 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
               totalDurationFormatted={totalDurationFormatted}
               totalModulesCount={totalModulesCount}
               continueLearningUrl={continueLearningUrl}
+              progressPercentage={progressPercentage}
+              initialIsBookmarked={isBookmarked}
             />
 
             {/* What You'll Learn Section */}
@@ -261,9 +357,13 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
               totalModulesCount={totalModulesCount}
               totalDurationFormatted={totalDurationFormatted}
               courseSlug={course.slug}
+              completedLessonIds={completedLessonIdList}
             />
           </main>
         </div>
+
+        {/* Footer */}
+        <Footer />
 
         {/* Ambient Bottom Skyline Graphic */}
         <div className="relative w-full">
@@ -273,7 +373,7 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
 
       {/* Sticky Bottom Progress Bar */}
       <StickyCourseProgress
-        progressPercentage={35}
+        progressPercentage={progressPercentage}
         continueLearningUrl={continueLearningUrl}
         courseSlug={course.slug}
       />

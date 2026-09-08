@@ -8,7 +8,12 @@ import { auth } from "@clerk/nextjs/server";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { SimpleMemoryCache } from "@/lib/cache";
-import { normalizeSearchQuery, resolveVideoMomentsTwoStage } from "@/lib/utils/search";
+import {
+  normalizeSearchQuery,
+  processSearchQuery,
+  resolveVideoMomentsTwoStage,
+} from "@/lib/utils/search";
+import { serverClient } from "@/sanity/lib/client";
 
 export const maxDuration = 60; // Allow enough time for multi-step MCP tool calls
 
@@ -117,6 +122,80 @@ async function getCachedInitialContext() {
   return initialContextPromise;
 }
 
+/**
+ * Executes an optimized, single-hop batch GROQ search against Sanity.
+ * Pre-processes query tokens, handles synonyms, and joins parent lessons directly.
+ */
+async function executeDirectSanitySearch(query: string): Promise<SearchResults> {
+  const processed = processSearchQuery(query);
+  const { queryPattern, orConditions } = processed;
+  const orConditionsStr = orConditions.join(" ");
+
+  const batchGroq = `{
+    "lessons": *[_type == "lesson" && (
+      title match "${queryPattern}" ||
+      title match "${orConditionsStr}" ||
+      pt::text(notes) match "${queryPattern}" ||
+      pt::text(notes) match "${orConditionsStr}" ||
+      count(keyPoints[@ match "${queryPattern}"]) > 0
+    )][0...15] {
+      title,
+      "slug": slug.current,
+      "description": coalesce(pt::text(notes), title),
+      "courseTitle": *[_type == "course" && references(^._id)][0].title,
+      "moduleLabel": "Lesson Match",
+      keyPoints
+    },
+    "videos": *[_type == "video" && (
+      count(chapters[label match "${queryPattern}"]) > 0 ||
+      count(chapters[label match "${orConditionsStr}"]) > 0 ||
+      count(chunks[text match "${queryPattern}"]) > 0 ||
+      count(chunks[text match "${orConditionsStr}"]) > 0
+    )][0...15] {
+      url,
+      "matchedChapters": chapters[label match "${queryPattern}" || label match "${orConditionsStr}"][0...3],
+      "matchedChunks": chunks[text match "${queryPattern}" || text match "${orConditionsStr}"][0...3],
+      "parentLesson": *[_type == "lesson" && videoUrl == ^.url][0] {
+        title,
+        "slug": slug.current,
+        "posterUrl": poster.asset->url,
+        "courseTitle": *[_type == "course" && references(^._id)][0].title
+      }
+    }
+  }`;
+
+  const data = await serverClient.fetch(batchGroq);
+  const matchedLessons: LessonResult[] = (data?.lessons || []).filter(
+    (l: any) => l?.courseTitle && l?.slug
+  );
+
+  const videoMoments: VideoMomentResult[] = [];
+  const matchedVideos = data?.videos || [];
+
+  for (const v of matchedVideos) {
+    const lesson = v.parentLesson;
+    if (!lesson || !lesson.slug || !lesson.courseTitle) continue;
+
+    const moments = resolveVideoMomentsTwoStage(v.matchedChapters, v.matchedChunks, 3);
+    for (const m of moments) {
+      videoMoments.push({
+        lessonTitle: lesson.title || "Lesson Video",
+        lessonSlug: lesson.slug,
+        courseTitle: lesson.courseTitle,
+        description: m.description,
+        startSeconds: m.startSeconds,
+        thumbnailUrl: lesson.posterUrl,
+        clipLength: m.clipLength,
+      });
+    }
+  }
+
+  return {
+    lessons: matchedLessons,
+    videoMoments,
+  };
+}
+
 export async function GET(req: Request) {
   // Apply search rate limit: 20 requests/minute per IP
   const rateLimit = checkRateLimit(req, 20, 60 * 1000, "search");
@@ -153,6 +232,25 @@ export async function GET(req: Request) {
     });
   }
 
+  // 2. FAST PATH: Execute direct optimized batch GROQ search
+  try {
+    const directResults = await executeDirectSanitySearch(query);
+
+    if (directResults.lessons.length > 0 || directResults.videoMoments.length > 0) {
+      searchResultCache.set(cacheKey, directResults);
+      trackSearchServer(userId, query, directResults, false);
+      return NextResponse.json(directResults, {
+        headers: {
+          "X-Cache": "MISS-FAST-GROQ",
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      });
+    }
+  } catch (directErr) {
+    console.warn("Direct Sanity search error, falling back to AI agent:", directErr);
+  }
+
+  // 3. DEEP / SEMANTIC AI AGENT PATH (for complex conversational queries or when direct search found 0)
   try {
     const [mcpClient, _initialContext] = await Promise.all([
       getMcpClient(),
@@ -187,7 +285,7 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
 `;
 
     const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(new Error("WAKING_UP")), 8000);
+    const timeoutId = setTimeout(() => abortController.abort(new Error("AI_TIMEOUT")), 3500);
 
     const { toolCalls } = await generateText({
       abortSignal: abortController.signal,
@@ -226,7 +324,6 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
         }),
       },
       stopWhen: (options) => {
-        // Stop if max 8 steps or if return_search_results tool was called in latest step
         if (options.steps.length >= 8) return true;
         const lastStep = options.steps[options.steps.length - 1];
         if (lastStep?.toolCalls.some((tc) => tc.toolName === "return_search_results")) {
@@ -242,7 +339,7 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
       (tc) => tc.toolName === "return_search_results"
     );
 
-    let finalResults: SearchResults;
+    let finalResults: SearchResults = { lessons: [], videoMoments: [] };
     if (resultToolCall) {
       const tc = resultToolCall as { input?: SearchResults; args?: SearchResults };
       const output = tc.input ?? tc.args;
@@ -250,125 +347,25 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
         lessons: output?.lessons ?? [],
         videoMoments: output?.videoMoments ?? [],
       };
-    } else {
-      finalResults = { lessons: [], videoMoments: [] };
     }
 
-    // If MCP returned results, cache and return
-    if (finalResults.lessons.length > 0 || finalResults.videoMoments.length > 0) {
-      searchResultCache.set(cacheKey, finalResults);
-      trackSearchServer(userId, query, finalResults, false);
-      return NextResponse.json(finalResults, {
-        headers: {
-          "X-Cache": "MISS",
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-        },
-      });
-    }
-
-    // Otherwise fall through to Sanity GROQ search for maximum recall
-    throw new Error("No MCP results returned, executing direct Sanity search");
+    searchResultCache.set(cacheKey, finalResults);
+    trackSearchServer(userId, query, finalResults, false);
+    return NextResponse.json(finalResults, {
+      headers: {
+        "X-Cache": "MISS-AI",
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+      },
+    });
   } catch (error: any) {
-    if (error?.message === "WAKING_UP" || error?.name === "AbortError" || error?.cause?.message === "WAKING_UP") {
-      return NextResponse.json(
-        { status: "waking_up", message: "Content is loading..." },
-        { status: 503 }
-      );
-    }
-
-    const errMsg = error instanceof Error ? error.message : String(error);
-    console.warn("Search LLM/MCP error or fallback triggered:", errMsg);
-    
-    // Direct Sanity GROQ Search Fallback
-    try {
-      const { serverClient } = await import("@/sanity/lib/client");
-      const cleanWords = query
-        .replace(/[^a-zA-Z0-9\s]/g, " ")
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean);
-      
-      const queryPattern = cleanWords.length > 0 ? `*${cleanWords.join("*")}*` : `*${query}*`;
-      const orConditions = cleanWords.map(w => `*${w}*`).join(" ");
-
-      // 1. Match Lessons with multi-field OR matching
-      const lessonsQuery = `*[_type == "lesson" && (
-        title match "${queryPattern}" ||
-        title match "${orConditions}" ||
-        pt::text(notes) match "${queryPattern}" ||
-        pt::text(notes) match "${orConditions}" ||
-        count(keyPoints[@ match "${queryPattern}"]) > 0
-      )][0...15] {
-        title,
-        "slug": slug.current,
-        "description": coalesce(pt::text(notes), title),
-        "courseTitle": *[_type == "course" && references(^._id)][0].title,
-        "moduleLabel": "Lesson Match",
-        keyPoints
-      }`;
-
-      // 2. Match Video Moments (chapters and chunks)
-      const videosQuery = `*[_type == "video" && (
-        count(chapters[label match "${queryPattern}"]) > 0 ||
-        count(chapters[label match "${orConditions}"]) > 0 ||
-        count(chunks[text match "${queryPattern}"]) > 0 ||
-        count(chunks[text match "${orConditions}"]) > 0
-      )][0...15] {
-        url,
-        "matchedChapters": chapters[label match "${queryPattern}" || label match "${orConditions}"][0...3],
-        "matchedChunks": chunks[text match "${queryPattern}" || text match "${orConditions}"][0...3]
-      }`;
-
-      const [matchedLessons, matchedVideos] = await Promise.all([
-        serverClient.fetch(lessonsQuery),
-        serverClient.fetch(videosQuery),
-      ]);
-
-      const videoMoments: any[] = [];
-      for (const v of matchedVideos) {
-        // Resolve lesson using this video URL
-        const lesson = await serverClient.fetch(
-          `*[_type == "lesson" && videoUrl == "${v.url}"][0]{
-            title,
-            "slug": slug.current,
-            "posterUrl": poster.asset->url,
-            "courseTitle": *[_type == "course" && references(^._id)][0].title
-          }`
-        );
-
-        if (!lesson || !lesson.slug || !lesson.courseTitle) continue;
-
-        const moments = resolveVideoMomentsTwoStage(v.matchedChapters, v.matchedChunks, 3);
-        for (const m of moments) {
-          videoMoments.push({
-            lessonTitle: lesson.title || "Lesson Video",
-            lessonSlug: lesson.slug,
-            courseTitle: lesson.courseTitle,
-            description: m.description,
-            startSeconds: m.startSeconds,
-            thumbnailUrl: lesson.posterUrl,
-            clipLength: m.clipLength,
-          });
-        }
-      }
-
-      const fallbackResults: SearchResults = {
-        lessons: (matchedLessons as LessonResult[]).filter((l) => l.courseTitle && l.slug),
-        videoMoments,
-      };
-
-      searchResultCache.set(cacheKey, fallbackResults);
-      trackSearchServer(userId, query, fallbackResults, false);
-      return NextResponse.json(fallbackResults, {
-        headers: {
-          "X-Cache": "MISS",
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-        },
-      });
-    } catch (fallbackError: unknown) {
-      const errMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-      console.error("Direct search fallback error:", fallbackError);
-      return NextResponse.json({ error: errMsg }, { status: 500 });
-    }
+    console.warn("AI search error or timeout:", error?.message || error);
+    const emptyResults: SearchResults = { lessons: [], videoMoments: [] };
+    searchResultCache.set(cacheKey, emptyResults);
+    return NextResponse.json(emptyResults, {
+      headers: {
+        "X-Cache": "MISS-EMPTY",
+        "Cache-Control": "public, s-maxage=60",
+      },
+    });
   }
 }

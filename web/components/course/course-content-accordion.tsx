@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, Play, Sparkles } from "lucide-react";
+import { ChevronDown, Play, Sparkles, CheckCircle2 } from "lucide-react";
 import { formatDuration } from "@/lib/utils/format";
 import posthog from "posthog-js";
 
@@ -25,6 +25,7 @@ interface CourseContentAccordionProps {
   totalModulesCount: number;
   totalDurationFormatted: string;
   courseSlug: string;
+  completedLessonIds?: string[];
 }
 
 export function CourseContentAccordion({
@@ -32,7 +33,9 @@ export function CourseContentAccordion({
   totalModulesCount,
   totalDurationFormatted,
   courseSlug,
+  completedLessonIds = [],
 }: CourseContentAccordionProps) {
+  const completedLessonSet = new Set(completedLessonIds);
   // Set first module open by default or track open modules
   const [openIndices, setOpenIndices] = useState<number[]>([]);
   const [showAll, setShowAll] = useState<boolean>(false);
@@ -137,27 +140,43 @@ export function CourseContentAccordion({
                       ? `/lessons/${lessonSlug}`
                       : `#`;
 
+                    const isCompleted = Boolean(lesson._id && completedLessonSet.has(lesson._id));
+
                     return (
                       <div
                         key={lesson._id || lIdx}
-                        className="py-3 flex items-center justify-between gap-3 text-sm"
+                        className="py-2.5 px-2 -mx-2 rounded-lg transition-colors hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 flex items-center justify-between gap-3 text-sm"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-200/60 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
-                            <Play className="h-3 w-3 fill-neutral-600 dark:fill-neutral-400 text-neutral-600 dark:text-neutral-400 ml-0.5" />
-                          </div>
+                          {isCompleted ? (
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                            </div>
+                          ) : (
+                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-200/60 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                              <Play className="h-3 w-3 fill-neutral-600 dark:fill-neutral-400 text-neutral-600 dark:text-neutral-400 ml-0.5" />
+                            </div>
+                          )}
                           <Link
                             href={lessonHref}
-                            className="font-medium text-neutral-800 dark:text-neutral-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"
+                            className={`font-medium transition-colors truncate ${
+                              isCompleted
+                                ? "text-neutral-600 dark:text-neutral-400 line-through decoration-neutral-300 dark:decoration-neutral-600"
+                                : "text-neutral-800 dark:text-neutral-200 hover:text-primary-600 dark:hover:text-primary-400"
+                            }`}
                           >
                             {lesson.title}
                           </Link>
-                          {lesson.freePreview && (
+                          {isCompleted ? (
+                            <span className="inline-flex items-center rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0">
+                              Completed
+                            </span>
+                          ) : lesson.freePreview ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0">
                               <Sparkles className="h-2.5 w-2.5" />
                               Free preview
                             </span>
-                          )}
+                          ) : null}
                         </div>
 
                         <span className="text-xs text-neutral-400 dark:text-neutral-500 shrink-0 font-mono">

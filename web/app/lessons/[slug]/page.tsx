@@ -89,6 +89,52 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
     ? course.level.charAt(0).toUpperCase() + course.level.slice(1)
     : "Intermediate";
 
+  // Fetch progress if authenticated
+  let progressPercentage = 0;
+  let completedLessonIdsList: string[] = [];
+  let isCourseBookmarked = false;
+  try {
+    const { auth } = await import("@clerk/nextjs/server");
+    const authData = await auth();
+    const userId = authData?.userId;
+    
+    if (userId) {
+      const progressDoc = await sanityFetch({
+        query: `*[_type == "progress" && clerkUserId == $userId][0] { 
+          completedLessons,
+          "bookmarkedCourseIds": coalesce(bookmarkedCourses[]->_id, [])
+        }`,
+        params: { userId },
+        tags: [`progress-${userId}`, `bookmarks-${userId}`],
+        revalidate: 0,
+      }) as any;
+      
+      if (progressDoc) {
+        if (course?._id && progressDoc.bookmarkedCourseIds?.includes(course._id)) {
+          isCourseBookmarked = true;
+        }
+
+        if (Array.isArray(progressDoc.completedLessons) && course?.modules) {
+          completedLessonIdsList = progressDoc.completedLessons.map((ref: any) => ref._ref).filter(Boolean);
+          const completedLessonIdsSet = new Set(completedLessonIdsList);
+          const courseLessonIds = course.modules.flatMap((m: any) => m.lessons || []).map((l: any) => l._id).filter(Boolean);
+          
+          if (courseLessonIds.length > 0) {
+            let completedInCourse = 0;
+            for (const id of courseLessonIds) {
+              if (completedLessonIdsSet.has(id)) {
+                completedInCourse++;
+              }
+            }
+            progressPercentage = Math.round((completedInCourse / courseLessonIds.length) * 100);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error fetching progress:", e);
+  }
+
   return (
     <div className="min-h-screen w-full bg-[#FAF9F6] dark:bg-[#090D16] font-sans text-neutral-900 dark:text-neutral-100 selection:bg-primary-100 selection:text-primary-500 transition-colors duration-200">
       {/* Centered Canvas matching 1440px viewport width */}
@@ -104,6 +150,8 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
               course={course || { title: "Next.js for Production", slug: "nextjs-for-production" }}
               currentLessonSlug={slug}
               activeModuleIndex={moduleIndex}
+              progressPercentage={progressPercentage > 0 ? progressPercentage : 0}
+              completedLessonIds={completedLessonIdsList}
             />
 
             {/* Right Lesson Content Area */}
@@ -112,7 +160,7 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
                  BREADCRUMB
                  ────────────────────────────────────────────────────────── */}
               <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
-                <Link href="/" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
+                <Link href="/courses" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
                   All Courses
                 </Link>
                 <ChevronRight className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500 shrink-0" />
@@ -144,7 +192,14 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
                   <div className="inline-flex items-center rounded-md border border-[#FED7AA] dark:border-primary-500/30 bg-[#FFF5EE] dark:bg-primary-500/10 px-2.5 py-0.5 text-[11px] font-bold tracking-wider text-[#EA580C] dark:text-primary-400 uppercase select-none">
                     {lessonLabel}
                   </div>
-                  <BookmarkButton courseId={lesson._id} />
+                  {course?._id && (
+                    <BookmarkButton
+                      courseId={course._id}
+                      courseTitle={course.title}
+                      initialIsBookmarked={isCourseBookmarked}
+                      size="sm"
+                    />
+                  )}
                 </div>
 
                 <h1 className="font-display text-3xl sm:text-4xl lg:text-[42px] font-bold text-neutral-900 dark:text-neutral-50 tracking-tight leading-tight mb-3">
@@ -209,7 +264,7 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
               {/* ──────────────────────────────────────────────────────────
                  PREVIOUS / NEXT LESSON FOOTER NAV
                  ────────────────────────────────────────────────────────── */}
-              <LessonFooterNav prevLesson={prevLesson} nextLesson={nextLesson} />
+              <LessonFooterNav prevLesson={prevLesson} nextLesson={nextLesson} courseSlug={course?.slug} />
             </main>
           </div>
         </div>

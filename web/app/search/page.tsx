@@ -1,9 +1,10 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
+import { Footer } from "@/components/layout/footer";
 import { SearchInput } from "@/components/search/search-input";
 import { LessonResultCard } from "@/components/search/lesson-result-card";
 import { VideoResultCard } from "@/components/search/video-result-card";
@@ -50,6 +51,7 @@ function SearchContent() {
   const [error, setError] = useState<string | null>(null);
   const [isWakingUp, setIsWakingUp] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortBy, setSortBy] = useState<"relevant" | "title_asc" | "course">("relevant");
 
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
@@ -120,12 +122,32 @@ function SearchContent() {
     };
   }, [query]);
 
-  // Combine items for ordered pagination
-  const allItems: SearchItem[] = [];
-  if (results) {
-    results.videoMoments.forEach((vm) => allItems.push({ type: "video", data: vm }));
-    results.lessons.forEach((l) => allItems.push({ type: "lesson", data: l }));
-  }
+  // Combine items for ordered pagination and sorting
+  const allItems: SearchItem[] = useMemo(() => {
+    const items: SearchItem[] = [];
+    if (results) {
+      results.videoMoments.forEach((vm) => items.push({ type: "video", data: vm }));
+      results.lessons.forEach((l) => items.push({ type: "lesson", data: l }));
+    }
+
+    if (sortBy === "title_asc") {
+      return [...items].sort((a, b) => {
+        const titleA = a.type === "video" ? a.data.lessonTitle : a.data.title;
+        const titleB = b.type === "video" ? b.data.lessonTitle : b.data.title;
+        return (titleA || "").localeCompare(titleB || "");
+      });
+    }
+
+    if (sortBy === "course") {
+      return [...items].sort((a, b) => {
+        const courseA = a.data.courseTitle || "";
+        const courseB = b.data.courseTitle || "";
+        return courseA.localeCompare(courseB);
+      });
+    }
+
+    return items;
+  }, [results, sortBy]);
 
   const totalResults = allItems.length;
   const uniqueCoursesCount = new Set(allItems.map((item) => item.data.courseTitle)).size;
@@ -160,19 +182,52 @@ function SearchContent() {
               </div>
             </nav>
 
-            {/* Page Title & Search Input Header (Centered) */}
-            <div className="mb-10 text-center flex flex-col items-center">
+            {/* Page Title Header (Centered) */}
+            <div className="mb-6 text-center flex flex-col items-center">
               <span className="mb-4 inline-flex rounded-full bg-primary-50 dark:bg-primary-950/40 px-3.5 py-1 text-xs font-bold tracking-widest text-primary-500 dark:text-primary-400 uppercase">
                 Search Results
               </span>
               <h1 className="text-display-2 sm:text-display-1 text-neutral-900 dark:text-neutral-100 mb-3">
                 Results for <span className="text-primary-500">&quot;{query}&quot;</span>
               </h1>
-              <p className="text-body-lg text-neutral-500 dark:text-neutral-400 mb-10">
+              <p className="text-body-lg text-neutral-500 dark:text-neutral-400">
                 Found {totalResults} result{totalResults === 1 ? "" : "s"} across {uniqueCoursesCount} course{uniqueCoursesCount === 1 ? "" : "s"}
               </p>
-              <div className="w-full max-w-4xl mx-auto">
+            </div>
+
+            {/* Sticky Search Box: locks under Navbar at top-20 with z-20 so results scroll behind it */}
+            <div className="sticky top-20 z-20 -mx-6 px-6 sm:-mx-12 sm:px-12 lg:-mx-16 lg:px-16 py-3.5 mb-8 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md transition-all border-b border-neutral-100/80 dark:border-neutral-800/80">
+              <div className="w-full max-w-4xl mx-auto space-y-3">
                 <SearchInput initialQuery={query} />
+                {/* Result Count and Summary (Compact, no divider lines) */}
+                {results && totalResults > 0 && (
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <h2 className="text-sm sm:text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                      Found {totalResults} result{totalResults === 1 ? "" : "s"}{uniqueCoursesCount > 0 ? ` across ${uniqueCoursesCount} course${uniqueCoursesCount === 1 ? "" : "s"}` : ""}
+                    </h2>
+
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={sortBy}
+                        onChange={(e) => {
+                          const val = e.target.value as "relevant" | "title_asc" | "course";
+                          setSortBy(val);
+                          setCurrentPage(1);
+                          posthog.capture("search_sorted", {
+                            query: query.trim(),
+                            sort_by: val,
+                          });
+                        }}
+                        aria-label="Sort search results"
+                        className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-xs sm:text-sm font-medium text-neutral-700 dark:text-neutral-200 shadow-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 cursor-pointer"
+                      >
+                        <option value="relevant">Most Relevant</option>
+                        <option value="title_asc">Title (A–Z)</option>
+                        <option value="course">By Course</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -192,49 +247,38 @@ function SearchContent() {
                   <div className="h-9 w-36 rounded-lg bg-neutral-200 dark:bg-neutral-800"></div>
                 </div>
 
-                {/* 4 Skeleton Dual-Column Result Cards */}
-                <div className="flex flex-col gap-4">
+                {/* 4 Skeleton 2-Column Result Cards */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {Array.from({ length: 4 }).map((_, idx) => (
                     <div
                       key={idx}
-                      className="flex flex-col sm:flex-row w-full overflow-hidden rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xs"
+                      className="flex flex-col sm:flex-row h-full w-full overflow-hidden rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xs"
                     >
                       {/* Left Preview Box Skeleton */}
-                      <div className="relative w-full sm:w-[330px] lg:w-[350px] shrink-0 bg-neutral-100/70 dark:bg-neutral-800/60 p-6 flex flex-col justify-center border-r border-neutral-100 dark:border-neutral-800 animate-pulse space-y-3.5">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-1.5 w-1.5 rounded-full bg-neutral-300 dark:bg-neutral-700 shrink-0" />
-                          <div className="h-3.5 w-4/5 rounded bg-neutral-200 dark:bg-neutral-800" />
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-1.5 w-1.5 rounded-full bg-neutral-300 dark:bg-neutral-700 shrink-0" />
-                          <div className="h-3.5 w-3/4 rounded bg-neutral-200 dark:bg-neutral-800" />
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-1.5 w-1.5 rounded-full bg-neutral-300 dark:bg-neutral-700 shrink-0" />
-                          <div className="h-3.5 w-2/3 rounded bg-neutral-200 dark:bg-neutral-800" />
-                        </div>
-                        <div className="absolute bottom-4 right-4 h-4.5 w-4.5 rounded-full border border-neutral-300/80 dark:border-neutral-700" />
+                      <div className="relative w-full sm:w-[200px] md:w-[210px] lg:w-[220px] shrink-0 bg-[#0F172A] dark:bg-black p-5 flex flex-col justify-center min-h-[160px] sm:min-h-full animate-pulse space-y-3">
+                        <div className="h-10 w-10 mx-auto rounded-lg bg-neutral-800 dark:bg-neutral-900" />
+                        <div className="h-3 w-3/4 mx-auto rounded bg-neutral-800 dark:bg-neutral-900" />
                       </div>
 
                       {/* Right Content Skeleton */}
-                      <div className="flex flex-col justify-between p-5 sm:p-6 w-full space-y-4 animate-pulse">
+                      <div className="flex flex-col justify-between p-4 sm:p-5 w-full space-y-4 animate-pulse min-w-0">
                         <div>
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                              <div className="h-5 w-5 rounded bg-neutral-200 dark:bg-neutral-800" />
-                              <div className="h-4 w-40 rounded bg-neutral-200 dark:bg-neutral-800" />
+                              <div className="h-4 w-4 rounded bg-neutral-200 dark:bg-neutral-800" />
+                              <div className="h-3.5 w-28 rounded bg-neutral-200 dark:bg-neutral-800" />
                             </div>
-                            <div className="h-5 w-16 rounded-full bg-neutral-200 dark:bg-neutral-800" />
+                            <div className="h-4 w-12 rounded-full bg-neutral-200 dark:bg-neutral-800" />
                           </div>
                           <div className="mt-3 space-y-2">
-                            <div className="h-6 w-3/5 rounded bg-neutral-200 dark:bg-neutral-800" />
-                            <div className="h-4 w-full rounded bg-neutral-100 dark:bg-neutral-800/50" />
-                            <div className="h-4 w-4/5 rounded bg-neutral-100 dark:bg-neutral-800/50" />
+                            <div className="h-5 w-4/5 rounded bg-neutral-200 dark:bg-neutral-800" />
+                            <div className="h-3.5 w-full rounded bg-neutral-100 dark:bg-neutral-800/50" />
+                            <div className="h-3.5 w-2/3 rounded bg-neutral-100 dark:bg-neutral-800/50" />
                           </div>
                         </div>
-                        <div className="mt-5 flex items-center justify-between border-t border-neutral-100 dark:border-neutral-800 pt-4">
-                          <div className="h-3.5 w-24 rounded bg-neutral-200 dark:bg-neutral-800" />
-                          <div className="h-3.5 w-24 rounded bg-neutral-200 dark:bg-neutral-800" />
+                        <div className="mt-4 flex items-center justify-between border-t border-neutral-100 dark:border-neutral-800 pt-3">
+                          <div className="h-3 w-20 rounded bg-neutral-200 dark:bg-neutral-800" />
+                          <div className="h-3 w-20 rounded bg-neutral-200 dark:bg-neutral-800" />
                         </div>
                       </div>
                     </div>
@@ -248,26 +292,11 @@ function SearchContent() {
               </div>
             ) : results ? (
               totalResults > 0 ? (
-                <div className="w-full space-y-4">
-                  {/* Result Count and Summary (Compact, no divider lines) */}
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1 pb-4">
-                    <h2 className="text-heading-3 text-neutral-900 dark:text-neutral-100">
-                      {totalResults} result{totalResults === 1 ? "" : "s"}
-                    </h2>
-                    
-                    <div className="flex items-center gap-2">
-                      <select className="rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-3 py-1.5 text-sm font-medium text-neutral-700 dark:text-neutral-200 shadow-xs focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500">
-                        <option>Most Relevant</option>
-                        <option>Newest First</option>
-                        <option>Oldest First</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Full-Width Meta Result Cards */}
-                  <div className="flex flex-col gap-4">
+                <div className="w-full space-y-6">
+                  {/* 2-Column Desktop Grid for Result Cards */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {currentItems.map((item, idx) => (
-                      <div key={idx} className="w-full">
+                      <div key={idx} className="h-full w-full">
                         {item.type === "video" ? (
                           <VideoResultCard
                             videoMoment={item.data}
@@ -370,6 +399,9 @@ function SearchContent() {
             )}
           </main>
         </div>
+
+        {/* Footer */}
+        <Footer />
 
         {/* Ambient Bottom Skyline Graphic Footer */}
         <BottomGraphic />

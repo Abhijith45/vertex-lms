@@ -6,6 +6,7 @@ import { HeroSearch } from "@/components/home/hero-search";
 import { HomeCourseCard } from "@/components/home/home-course-card";
 import { CourseIcon } from "@/components/home/course-icons";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
+import { Footer } from "@/components/layout/footer";
 import { ExploreCoursesButton } from "@/components/home/explore-courses-button";
 import { sanityFetch } from "@/sanity/lib/client";
 import { getCoursesQuery } from "@/sanity/lib/queries";
@@ -182,6 +183,9 @@ export default async function HomePage() {
             </div>
           </section>
         </div>
+
+        {/* Footer */}
+        <Footer />
 
         {/* ──────────────────────────────────────────────────────────
            BOTTOM SKYLINE ARTWORK

@@ -37,6 +37,42 @@ describe("resolveFallbackThumbnailType", () => {
     });
   });
 
+  describe("Docker & DevOps topic matching", () => {
+    test("detects Docker from courseTitle", () => {
+      assert.equal(
+        resolveFallbackThumbnailType("DevOps with Docker and Kubernetes", "Introduction", "intro"),
+        "docker"
+      );
+      assert.equal(
+        resolveFallbackThumbnailType("DevOps Essentials", "Containerizing Applications", "containers"),
+        "docker"
+      );
+    });
+
+    test("detects Docker from lessonTitle", () => {
+      assert.equal(
+        resolveFallbackThumbnailType("Cloud Infrastructure", "Docker Compose Multi-Stage Builds", "compose-builds"),
+        "docker"
+      );
+    });
+
+    test("detects Docker from lessonSlug", () => {
+      assert.equal(
+        resolveFallbackThumbnailType("Containers 101", "Pod Scaling", "docker-pod-scaling"),
+        "docker"
+      );
+    });
+  });
+
+  describe("TypeScript topic matching", () => {
+    test("detects TypeScript from courseTitle", () => {
+      assert.equal(
+        resolveFallbackThumbnailType("TypeScript for Application Developers", "Generics & Conditional Types", "generics"),
+        "typescript"
+      );
+    });
+  });
+
   describe("React topic matching", () => {
     test("detects React from courseTitle", () => {
       assert.equal(
@@ -60,24 +96,64 @@ describe("resolveFallbackThumbnailType", () => {
     });
   });
 
-  describe("Default code icon matching for other topics", () => {
-    test("returns default for TypeScript topics", () => {
+  describe("Python topic matching", () => {
+    test("detects Python from courseTitle", () => {
       assert.equal(
-        resolveFallbackThumbnailType("TypeScript for Application Developers", "Generics & Conditional Types", "generics"),
-        "default"
+        resolveFallbackThumbnailType("Python for Data Work", "DataFrames with Pandas", "pandas-dataframes"),
+        "python"
       );
     });
+  });
 
-    test("returns default for Docker & DevOps topics", () => {
+  describe("PostgreSQL topic matching", () => {
+    test("detects PostgreSQL from courseTitle", () => {
       assert.equal(
-        resolveFallbackThumbnailType("DevOps Essentials", "Containerizing with Docker", "docker-basics"),
-        "default"
+        resolveFallbackThumbnailType("PostgreSQL for Developers", "Query Indexing Strategies", "indexing"),
+        "postgres"
       );
     });
+  });
 
-    test("returns default for Python & Machine Learning topics", () => {
+  describe("AI & LLM topic matching", () => {
+    test("detects AI from courseTitle", () => {
       assert.equal(
-        resolveFallbackThumbnailType("Python for AI", "NumPy & Pandas", "numpy-pandas"),
+        resolveFallbackThumbnailType("Building AI Apps with LLMs", "Prompt Engineering", "prompting"),
+        "ai"
+      );
+    });
+  });
+
+  describe("System Design topic matching", () => {
+    test("detects System Design from courseTitle", () => {
+      assert.equal(
+        resolveFallbackThumbnailType("System Design Foundations", "Load Balancing", "load-balancing"),
+        "system-design"
+      );
+    });
+  });
+
+  describe("Security topic matching", () => {
+    test("detects Security from courseTitle", () => {
+      assert.equal(
+        resolveFallbackThumbnailType("Practical Web Security", "Preventing XSS", "xss"),
+        "security"
+      );
+    });
+  });
+
+  describe("RAG topic matching", () => {
+    test("detects RAG from courseTitle", () => {
+      assert.equal(
+        resolveFallbackThumbnailType("Retrieval-Augmented Generation from Scratch", "Vector Embeddings", "embeddings"),
+        "rag"
+      );
+    });
+  });
+
+  describe("Default code icon matching for unmatched topics", () => {
+    test("returns default for unknown subjects", () => {
+      assert.equal(
+        resolveFallbackThumbnailType("General Computer Science", "Algorithms", "algorithms"),
         "default"
       );
     });

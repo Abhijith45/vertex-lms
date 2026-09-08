@@ -1,0 +1,185 @@
+import React from "react";
+import Link from "next/link";
+import { ChevronRight, ShieldCheck, Mail, Lock, Database, Eye, RefreshCw } from "lucide-react";
+import { Navbar } from "@/components/layout/navbar";
+import { Footer } from "@/components/layout/footer";
+import { BottomGraphic } from "@/components/home/bottom-graphic";
+
+export const metadata = {
+  title: "Privacy Policy | Vertex",
+  description: "Learn how Vertex handles your personal data, authentication details, learning progress, and third-party embeds.",
+};
+
+export default function PrivacyPolicyPage() {
+  const lastUpdated = "September 8, 2026";
+
+  return (
+    <div className="min-h-screen w-full bg-[#FAF9F6] dark:bg-[#090D16] font-sans text-neutral-900 dark:text-neutral-100 selection:bg-primary-100 selection:text-primary-500 transition-colors duration-200">
+      <div className="mx-auto min-h-screen max-w-[1440px] bg-white dark:bg-[#0F172A] border-x border-neutral-200/50 dark:border-neutral-800/80 shadow-xs flex flex-col justify-between transition-colors duration-200">
+        <div>
+          {/* Top Header */}
+          <Navbar activePath="/privacy-policy" />
+
+          <main className="px-6 py-10 sm:px-12 lg:px-16 max-w-4xl mx-auto">
+            {/* Breadcrumb */}
+            <nav aria-label="Breadcrumb" className="mb-8 flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
+              <Link href="/" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
+                Home
+              </Link>
+              <ChevronRight className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+              <span className="text-neutral-800 dark:text-neutral-200 font-medium" aria-current="page">
+                Privacy Policy
+              </span>
+            </nav>
+
+            {/* Header / Intro */}
+            <div className="mb-12 border-b border-neutral-200/80 dark:border-neutral-800/80 pb-8">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 dark:border-emerald-800/60 bg-emerald-50 dark:bg-emerald-950/40 px-3.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-4">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span>Transparent Compliance Notice</span>
+              </div>
+              <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 mb-3">
+                Privacy Policy
+              </h1>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                Last updated: <span className="font-medium text-neutral-700 dark:text-neutral-300">{lastUpdated}</span> • Developer & Data Controller: <strong className="text-neutral-800 dark:text-neutral-200">Abhijeet Rawat</strong>
+              </p>
+            </div>
+
+            {/* Educational / Portfolio Highlight Callout */}
+            <div className="mb-10 rounded-xl border border-primary-200 dark:border-primary-500/30 bg-primary-50/50 dark:bg-primary-950/20 p-5 text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed">
+              <h2 className="font-bold text-base text-primary-800 dark:text-primary-400 mb-1.5 flex items-center gap-2">
+                <span>Educational & Portfolio Purpose</span>
+              </h2>
+              <p>
+                <strong>Vertex</strong> is a software engineering portfolio and educational demonstration application designed and maintained solely by <strong>Abhijeet Rawat</strong>. Vertex does <em>not</em> sell products, charge course fees, or monetize user data. This policy transparently outlines how data is gathered to deliver platform features such as user authentication, lesson progress saving, search relevance, and video streaming.
+              </p>
+            </div>
+
+            {/* Content Body */}
+            <div className="space-y-10 text-neutral-700 dark:text-neutral-300 leading-relaxed text-sm sm:text-base">
+              {/* Section 1 */}
+              <section className="space-y-3">
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
+                  <Database className="h-5 w-5 text-primary-500" />
+                  <span>1. Information We Collect and Store</span>
+                </h2>
+                <p>
+                  To provide an interactive learning experience with personalized progress tracking, Vertex processes limited user information:
+                </p>
+                <ul className="list-disc pl-5 space-y-2 text-neutral-600 dark:text-neutral-400">
+                  <li>
+                    <strong className="text-neutral-900 dark:text-neutral-100">Account & Identity Information:</strong> When you register or sign in using Clerk, we store your email address, primary name, profile picture, and an opaque user identifier generated by Clerk.
+                  </li>
+                  <li>
+                    <strong className="text-neutral-900 dark:text-neutral-100">Learner Progress & Bookmarks:</strong> Records of lessons you have completed, video resume positions (timestamps), and courses you have bookmarked. This state is securely stored in a private Sanity datastore keyed by your Clerk user ID.
+                  </li>
+                  <li>
+                    <strong className="text-neutral-900 dark:text-neutral-100">Product Usage Telemetry:</strong> We collect aggregated, privacy-conscious usage metrics via PostHog, such as course detail visits, search queries, and video playback milestones, to evaluate search quality and improve platform UX.
+                  </li>
+                  <li>
+                    <strong className="text-neutral-900 dark:text-neutral-100">Local Device Preferences:</strong> Your preferred theme (light mode, dark mode, or system default) is stored locally in your browser’s <code className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-xs font-mono">localStorage</code> under the key <code className="px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-xs font-mono">vertex-theme</code>.
+                  </li>
+                </ul>
+              </section>
+
+              {/* Section 2 */}
+              <section className="space-y-3">
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
+                  <Eye className="h-5 w-5 text-primary-500" />
+                  <span>2. Third-Party Service Providers and Processors</span>
+                </h2>
+                <p>
+                  Vertex relies on trusted infrastructure providers for specific functionality. Each processor adheres to strict data protection standards:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 bg-neutral-50/50 dark:bg-neutral-900/40">
+                    <h3 className="font-bold text-neutral-900 dark:text-white mb-1">Clerk (Authentication)</h3>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                      Manages secure registration, login sessions, multi-factor authentication, and passwordless authentication.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 bg-neutral-50/50 dark:bg-neutral-900/40">
+                    <h3 className="font-bold text-neutral-900 dark:text-white mb-1">Sanity.io (Headless CMS)</h3>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                      Stores educational course content, curriculum metadata, and private learner progress documents.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 bg-neutral-50/50 dark:bg-neutral-900/40">
+                    <h3 className="font-bold text-neutral-900 dark:text-white mb-1">PostHog (Analytics)</h3>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                      Captures in-app interaction events, page views, and search patterns for application performance diagnostics.
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-4 bg-neutral-50/50 dark:bg-neutral-900/40">
+                    <h3 className="font-bold text-neutral-900 dark:text-white mb-1">YouTube Embed Players</h3>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                      Streams video lessons via YouTube&apos;s standard embed API. Google may log viewer statistics according to YouTube’s privacy terms.
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section 3 */}
+              <section className="space-y-3">
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
+                  <Lock className="h-5 w-5 text-primary-500" />
+                  <span>3. Third-Party Video Streaming & YouTube API</span>
+                </h2>
+                <p>
+                  Video lessons featured within Vertex are embedded directly from YouTube and other video hosting platforms using their official, public iframe player APIs:
+                </p>
+                <ul className="list-disc pl-5 space-y-1.5 text-neutral-600 dark:text-neutral-400">
+                  <li>Vertex does not download, re-host, duplicate, or alter original video files.</li>
+                  <li>All views, engagement, and channel metrics generated by video playback register directly with the content owner on YouTube.</li>
+                  <li>By playing embedded videos on Vertex, you interact directly with YouTube&apos;s embed service, governed by the <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="text-primary-600 dark:text-primary-400 underline hover:text-primary-700">Google Privacy Policy</a> and the <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer" className="text-primary-600 dark:text-primary-400 underline hover:text-primary-700">YouTube Terms of Service</a>.</li>
+                </ul>
+              </section>
+
+              {/* Section 4 */}
+              <section className="space-y-3">
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
+                  <RefreshCw className="h-5 w-5 text-primary-500" />
+                  <span>4. Your Rights (Access, Correction & Deletion)</span>
+                </h2>
+                <p>
+                  Regardless of your jurisdiction (including GDPR in Europe and CCPA/CPRA in California), we guarantee full control over your personal data:
+                </p>
+                <ul className="list-disc pl-5 space-y-1.5 text-neutral-600 dark:text-neutral-400">
+                  <li><strong className="text-neutral-900 dark:text-neutral-100">Right to Access:</strong> You can request a copy of all stored progress, bookmark, and account data associated with your user ID.</li>
+                  <li><strong className="text-neutral-900 dark:text-neutral-100">Right to Rectification:</strong> You can update your profile information at any time via the user account dropdown powered by Clerk.</li>
+                  <li><strong className="text-neutral-900 dark:text-neutral-100">Right to Erasure (&quot;Right to be Forgotten&quot;):</strong> You can permanently delete your account and all associated progress documents by contacting us directly.</li>
+                </ul>
+              </section>
+
+              {/* Section 5 */}
+              <section className="space-y-3">
+                <h2 className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
+                  <Mail className="h-5 w-5 text-primary-500" />
+                  <span>5. Data Controller Contact & Deletion Requests</span>
+                </h2>
+                <p>
+                  If you have any questions regarding this Privacy Policy, wish to exercise your data rights, or request immediate deletion of your learner record, please send an email to:
+                </p>
+                <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-5 bg-neutral-50 dark:bg-neutral-900/60 max-w-md">
+                  <p className="text-xs uppercase tracking-wider text-neutral-500 font-semibold mb-1">Developer & Data Contact</p>
+                  <p className="font-bold text-neutral-900 dark:text-white text-base">Abhijeet Rawat</p>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
+                    Email: <a href="mailto:abhijeetrawat45@gmail.com" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">abhijeetrawat45@gmail.com</a>
+                  </p>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
+                    Requests are fulfilled manually within 24 to 48 hours.
+                  </p>
+                </div>
+              </section>
+            </div>
+          </main>
+        </div>
+
+        {/* Footer above BottomGraphic */}
+        <Footer />
+        <BottomGraphic />
+      </div>
+    </div>
+  );
+}

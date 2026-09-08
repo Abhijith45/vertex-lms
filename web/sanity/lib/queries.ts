@@ -16,6 +16,7 @@ export const getCoursesQuery = defineQuery(`
       title,
       summary,
       lessons[]->{
+        _id,
         duration
       }
     },

@@ -261,8 +261,10 @@ export function VideoEmbed({
             } else if (event.data === 0) {
               setIsPlaying(false);
               const dur = duration || playerInstanceRef.current?.getDuration() || 0;
-              if (!hasCompletedRef.current) {
-                hasCompletedRef.current = true;
+              const wasCompleted = hasCompletedRef.current;
+              hasCompletedRef.current = true;
+
+              if (!wasCompleted) {
                 posthog.capture("lesson_completed", {
                   lesson_slug: lessonSlugRef.current || "",
                   lesson_title: titleRef.current,
@@ -270,25 +272,36 @@ export function VideoEmbed({
                   duration: Math.floor(dur),
                   source: "video_ended",
                 });
+              }
 
+              const handleEndNavigation = async () => {
                 if (lessonSlugRef.current) {
-                  fetch("/api/progress", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      lessonSlug: lessonSlugRef.current,
-                      courseSlug: courseSlugRef.current,
-                      positionSeconds: Math.floor(dur),
-                      completed: true,
-                    }),
-                  }).catch(() => {});
+                  try {
+                    const res = await fetch("/api/progress", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        lessonSlug: lessonSlugRef.current,
+                        courseSlug: courseSlugRef.current,
+                        positionSeconds: Math.floor(dur),
+                        completed: true,
+                      }),
+                    });
+                    if (res.ok) {
+                      router.refresh();
+                    }
+                  } catch (e) {
+                    console.error("Failed to save completed progress:", e);
+                  }
                 }
-              }
 
-              // Read from ref so autoplay state toggle never triggers player re-init
-              if (autoplayNextRef.current && nextLessonSlugRef.current) {
-                router.push(`/lessons/${nextLessonSlugRef.current}`);
-              }
+                // Read from ref so autoplay state toggle never triggers player re-init
+                if (autoplayNextRef.current && nextLessonSlugRef.current) {
+                  router.push(`/lessons/${nextLessonSlugRef.current}`);
+                }
+              };
+
+              handleEndNavigation();
             }
           },
         },
@@ -358,14 +371,15 @@ export function VideoEmbed({
                     duration: Math.floor(dur),
                   });
 
-                  if (m === 100 && !hasCompletedRef.current) {
+                  const isCompletedMilestone = m >= 90;
+                  if (isCompletedMilestone && !hasCompletedRef.current) {
                     hasCompletedRef.current = true;
                     posthog.capture("lesson_completed", {
                       lesson_slug: lessonSlugRef.current || "",
                       lesson_title: titleRef.current,
                       course_slug: courseSlugRef.current || "",
                       duration: Math.floor(dur),
-                      source: "video_ended",
+                      source: "watch_depth_milestone",
                     });
                   }
 
@@ -377,9 +391,15 @@ export function VideoEmbed({
                         lessonSlug: lessonSlugRef.current,
                         courseSlug: courseSlugRef.current,
                         positionSeconds: Math.floor(curr),
-                        completed: m === 100,
+                        completed: isCompletedMilestone,
                       }),
-                    }).catch(() => {});
+                    })
+                      .then((res) => {
+                        if (res.ok && isCompletedMilestone) {
+                          router.refresh();
+                        }
+                      })
+                      .catch(() => {});
                   }
                 }
               }

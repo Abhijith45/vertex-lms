@@ -9,6 +9,8 @@ import {
   Users,
   ArrowRight,
   BarChart2,
+  Play,
+  RotateCcw,
 } from "lucide-react";
 import posthog from "posthog-js";
 import { CourseCoverArt } from "./course-cover-art";
@@ -38,6 +40,8 @@ interface CourseHeroProps {
   totalDurationFormatted: string;
   totalModulesCount: number;
   continueLearningUrl?: string;
+  progressPercentage?: number;
+  initialIsBookmarked?: boolean;
 }
 
 export function CourseHero({
@@ -45,7 +49,18 @@ export function CourseHero({
   totalDurationFormatted,
   totalModulesCount,
   continueLearningUrl = "#",
+  progressPercentage = 0,
+  initialIsBookmarked = false,
 }: CourseHeroProps) {
+  let ctaLabel = "Start Learning";
+  let CtaIcon = ArrowRight;
+  if (progressPercentage >= 100) {
+    ctaLabel = "Review Course";
+    CtaIcon = RotateCcw;
+  } else if (progressPercentage > 0) {
+    ctaLabel = "Continue Learning";
+    CtaIcon = Play;
+  }
   // Format level string (e.g. "intermediate" -> "Intermediate")
   const levelDisplay = course.level
     ? course.level.charAt(0).toUpperCase() + course.level.slice(1)
@@ -138,20 +153,25 @@ export function CourseHero({
             <Link
               href={continueLearningUrl}
               onClick={() => {
-                posthog.capture("resume_used", {
+                posthog.capture(progressPercentage > 0 ? "resume_used" : "course_started", {
                   course_slug: course.slug,
                   course_title: course.title,
                   continue_url: continueLearningUrl,
+                  progress_percentage: progressPercentage,
                   source: "course_hero",
                 });
               }}
               className="inline-flex items-center gap-2 rounded-xl bg-[#E05A36] px-6 py-3.5 text-sm sm:text-base font-medium text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:bg-[#C2410C] hover:shadow-lg active:scale-[0.99] cursor-pointer"
             >
-              <span>Continue Learning</span>
-              <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2} />
+              <span>{ctaLabel}</span>
+              <CtaIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2} />
             </Link>
 
-            <BookmarkButton courseId={course._id} />
+            <BookmarkButton
+              courseId={course._id}
+              initialIsBookmarked={initialIsBookmarked}
+              courseTitle={course.title}
+            />
           </div>
         </div>
       </div>
