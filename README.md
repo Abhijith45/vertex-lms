@@ -1,207 +1,285 @@
 # Vertex — AI-Powered Learning Platform
 
-> A production-grade AI-powered learning platform with intelligent plain-language video search, structured engineering curriculum, learner progress tracking, and full compliance architecture.
+> A production-grade, AI-powered learning platform featuring intelligent plain-language video search, second-level timestamp deep-linking, structured engineering curriculum, learner progress tracking, and an enterprise compliance suite.
 
 ---
 
 ## 🌟 Overview & Core Differentiators
 
-Vertex is an intelligent learning platform engineered with Next.js 16, Sanity Studio v5, Clerk authentication, and the Sanity Context MCP. 
+Vertex is an intelligent, full-stack learning management system built with Next.js 16, Sanity Studio v5, Clerk authentication, PostHog analytics, and the Sanity Context MCP.
 
-What sets Vertex apart is its **intelligent timestamped search**:
-* **Plain-English Querying:** A learner searches for concepts like *"how does useMemo prevent re-renders"* or *"docker multi-stage builds"*.
-* **Two-Stage Timestamp Resolution:** The search pipeline matches authored chapter markers first, falling back to timestamped transcript chunks for pinpoint accuracy.
-* **Ranked, Grounded Cards:** Results return clean, structured cards linking directly to the exact second in the lesson video where that concept is explained.
-* **On-Site Playback:** Videos play directly on the site via official third-party embed providers (YouTube, Vimeo, Bunny) with deep-linked start times without sending the learner away.
+### Key Capabilities:
+* **Natural Language Video Search:** A learner enters a conceptual query (e.g. *"how does useMemo prevent child re-renders"* or *"docker multi-stage build caching"*) and receives ranked, clickable cards.
+* **Two-Stage Timestamp Resolution:** Queries match clean, authored chapter markers first. If no chapter matches, the search engine falls back to timestamped transcript chunks for pinpoint precision.
+* **On-Site Seek Playback:** Cards deep-link straight to the exact second in the lesson's video where that concept is explained, using official third-party embed players (YouTube, Vimeo, Bunny) with zero video re-hosting.
+* **Learner State Tracking & Bookmarks:** Tracks completed lessons, resume playback positions, and course bookmarks per user via server-isolated private datastores.
+* **Complete Compliance Suite:** Out-of-the-box legal, accessibility (WCAG 2.1 AA), privacy (GDPR/CCPA), DMCA takedown, security notice, dynamic sitemap, and robots.txt infrastructure.
 
 ---
 
 ## 🏗️ Monorepo Architecture
 
-Vertex is structured as two independent standalone workspaces in a unified repository:
+Vertex is structured as two independent, standalone workspaces in a monorepo:
 
 ```
 vertex/
-├── studio/     # Sanity Studio v5 — Content modeling, schemas & authoring
-├── web/        # Next.js 16 (App Router) — Learner site, search API & UI
-└── prompts/    # Engineering implementation prompts & architecture specs
+├── studio/     # Sanity Studio v5 — Content modeling, authoring UI & ingestion scripts
+├── web/        # Next.js 16 (App Router) — Learner-facing site, search API & UI
+└── prompts/    # Architecture decision records (ADRs) & implementation prompts
 ```
 
-Both workspaces maintain **standalone dependencies, independent deployments, and separate dev servers** to ensure clean boundaries, TypeGen support, and independent continuous delivery.
+Both workspaces maintain **independent package manifests (`package.json`), separate dev servers, and isolated deployment pipelines**. This separation preserves TypeGen type generation, Studio auto-updates, and server/client security boundaries.
 
 ---
 
-## 🛠️ Complete Technology Stack & Tooling Catalog
+## 🛠️ Core Tooling Deep-Dive, Quotas & Alternatives
 
-Every tool and framework in Vertex serves a precise, deliberate architectural purpose:
+Vertex leverages best-in-class modern developer tools. Below is an exhaustive breakdown of why each tool was chosen, how it is implemented in Vertex, its free-tier quota limits, and viable alternatives:
 
-| Category | Tool / Library | Purpose in Vertex |
-|---|---|---|
-| **Core Framework** | **Next.js 16 (App Router & Turbopack)** | Server-side rendering (SSR), incremental static regeneration (ISR), API Route Handlers, middleware routing, and dynamic metadata generation. |
-| **UI Library** | **React 19** | Modern UI composition, React Server Components (RSC), Suspense boundaries, and optimistic state updates. |
-| **Styling & Tokens** | **Tailwind CSS v4** | Utility-first design system with CSS design tokens, custom primary color scales (`#E05A36`), responsive breakpoints, and dark mode variants. |
-| **Typography** | **Google Fonts (`next/font`)** | Editorial headings with **Playfair Display** paired with modern interface typography via **Inter**. |
-| **Theme System** | **Custom ThemeProvider** | Light / Dark / System theme state machine with an anti-flash inline boot script in `<head>` and `localStorage` persistence (`vertex-theme`). |
-| **Authentication** | **Clerk (`@clerk/nextjs`)** | User identity, session JWT management, protected Next.js middleware, guest sign-in prompts, and `<UserButton>` profile controls. |
-| **Headless CMS** | **Sanity Studio v5 (`next-sanity`)** | Structured content authoring, schema definitions (`defineType`, `defineField`), GROQ queries, Portable Text rich text, and TypeGen typing. |
-| **AI Search Agent** | **Sanity Context MCP (`@ai-sdk/mcp`)** | Model Context Protocol server exposing private Sanity schema context and filtered search queries directly to the LLM. |
-| **LLM Provider** | **OpenAI GPT-4o (`@ai-sdk/openai`)** | Natural language processing via the Vercel AI SDK to interpret search intent, expand technical synonyms, and rank results. |
-| **Product Analytics** | **PostHog (`posthog-js`, `posthog-node`)** | Privacy-conscious user telemetry tracking catalog views, search queries, video watch milestones (25%, 50%, 75%, 100%), and bookmarking. |
-| **Schema Validation** | **Zod (`zod`)** | Runtime schema parsing and type validation for search requests, progress payloads, and bookmark mutations. |
-| **Icons** | **Lucide React (`lucide-react`)** | Clean, accessible vector icons across UI cards, navigation, video controls, and compliance badges. |
-| **SEO & Discovery** | **Next.js Metadata, `sitemap.ts`, `robots.ts`** | Automated XML sitemap generation (`/sitemap.xml`), crawl directives (`/robots.txt`), OpenGraph cards, and canonical tags. |
-| **Testing Suite** | **Node.js Native Test Runner (`node --test`)** | Zero-dependency, ultra-fast unit testing covering search flow, video controls, bookmarks, cache invalidation, and compliance routes. |
+### 1. 🔐 Clerk (Authentication & User Identity)
+* **Purpose & Usage in Vertex:**
+  - Manages secure user registration, multi-factor login, and passwordless authentication.
+  - Controls route protection via Next.js middleware (`proxy.ts` / middleware).
+  - Supplies client components (`<ClerkProvider>`, `<SignInButton>`, `<SignUpButton>`, `<UserButton>`) styled with Vertex design tokens (`#E05A36`).
+  - Provides server-side `auth()` in API routes (`/api/progress`, `/api/bookmarks`) to key user progress documents to the authenticated `userId`.
+  - Triggers sign-in modals when guest learners attempt to save progress or bookmark courses.
+* **Free-Tier Limits:** Up to **10,000 Monthly Active Users (MAUs)** with unlimited sign-ins on the free development tier.
+* **Viable Alternatives:**
+  - **[NextAuth.js / Auth.js](https://authjs.dev/):** Free, open-source, self-hosted session management supporting OAuth and credentials.
+  - **[Supabase Auth](https://supabase.com/auth):** Built on PostgreSQL Row Level Security (RLS) with 50,000 free MAUs.
+  - **[Better-Auth](https://www.better-auth.com/) / [Lucia](https://lucia-auth.com/):** Lightweight, developer-controlled TypeScript authentication libraries.
+  - **[Firebase Auth](https://firebase.google.com/docs/auth):** Generous 50,000 MAU free tier backed by Google Cloud.
 
 ---
 
-## 🔍 Intelligent Search Architecture
+### 2. 📝 Sanity Studio v5 (Headless CMS & Content Model)
+* **Purpose & Usage in Vertex:**
+  - Serves as the single source of truth for curriculum schemas: `course`, `module`, `lesson`, `instructor`, `category`, `video`, `agentContext`, and `progress`.
+  - Content authoring using rich Portable Text for lesson notes, key points, and learning outcomes.
+  - Generates strict TypeScript types via `sanity typegen`.
+  - Powers the **Sanity Context MCP** endpoint (`SANITY_CONTEXT_MCP_URL`), allowing the AI search agent to query the private schema context and execute grounded GROQ queries.
+  - Serves private dataset reads via server-only read tokens (`SANITY_API_READ_TOKEN`) and atomic progress/bookmark mutations via write tokens (`SANITY_API_WRITE_TOKEN`).
+* **Free-Tier Limits:** Free plan includes **20 admin users, 100,000 API CDN requests/month, 10GB asset storage, and 10,000 documents**.
+* **Viable Alternatives:**
+  - **[Payload CMS](https://payloadcms.com/):** Code-first, open-source Next.js headless CMS with native TypeScript and PostgreSQL/MongoDB support.
+  - **[Strapi](https://strapi.io/):** Popular open-source Node.js headless CMS with customizable REST/GraphQL endpoints.
+  - **[Supabase (PostgreSQL + pgvector)](https://supabase.com/):** Direct relational database schema with vector embeddings for semantic search.
+  - **[Contentful](https://www.contentful.com/):** Enterprise managed headless CMS.
+
+---
+
+### 3. 📊 PostHog (Product Analytics & Telemetry)
+* **Purpose & Usage in Vertex:**
+  - Captures privacy-preserving product engagement events on both client and server:
+    - `catalog_viewed` & `course_detail_viewed`
+    - `search_performed` (tracks query terms, search latency, and result counts)
+    - `lesson_viewed` & `course_bookmarked`
+    - `video_progress_milestone` (fires at 25%, 50%, 75%, and 100% video completion)
+  - Links anonymous sessions to authenticated users via the `<PostHogIdentity />` component.
+* **Free-Tier Limits:** **1,000,000 events/month and 5,000 session recordings/month for free**.
+* **Viable Alternatives:**
+  - **[Mixpanel](https://mixpanel.com/):** Product event analytics with 20M monthly events on free plan.
+  - **[Plausible Analytics](https://plausible.io/) / [Umami](https://umami.is/):** Lightweight, open-source, cookie-less web analytics.
+  - **[Google Analytics 4 (GA4)](https://analytics.google.com/):** Free standard web telemetry and conversion tracking.
+
+---
+
+### 4. 🐇 CodeRabbit (AI-Powered Code Reviews & CI/CD Guardrails)
+* **Purpose & Usage in Vertex:**
+  - Automated pull request code reviews directly on GitHub.
+  - Enforces Next.js 16 App Router best practices, detects token leaks (e.g., verifying `SANITY_API_WRITE_TOKEN` remains strictly server-side), catches React hydration issues, and checks GROQ query efficiency.
+  - Summarizes architectural diffs and validates test coverage across monorepo workspaces.
+* **Free-Tier Limits:** Free 14-day Pro trial; **Free for open-source public repositories on GitHub/GitLab**.
+* **Viable Alternatives:**
+  - **[Qodo / PR-Agent](https://github.com/qodo-ai/pr-agent):** Open-source AI code review agent runnable in self-hosted GitHub Actions workflows.
+  - **[Sourcery](https://sourcery.ai/):** AI-powered automated refactoring and PR review bot for Python and TypeScript.
+  - **[SonarQube / SonarCloud](https://www.sonarsource.com/):** Industry-standard static analysis for code quality, security vulnerabilities, and test coverage.
+
+---
+
+## 📦 How to Seed Initial Content into Sanity
+
+When setting up Vertex on a fresh Sanity project, your dataset will initially be empty. Follow these step-by-step instructions to load the curated courses, lessons, and AI Search Context:
+
+### Step 1: Login to Sanity CLI
+```bash
+cd studio
+npx sanity login
+```
+
+### Step 2: Import Courses, Lessons & Modules
+Vertex includes a comprehensive seed dataset containing structured courses (Next.js for Production, DevOps with Docker & Kubernetes, TypeScript, System Design, AI Apps), lesson notes, modules, instructors, and categories:
+
+```bash
+# Import the seed dataset into your production dataset
+npx sanity dataset import scripts/seed/seed.ndjson production --replace
+```
+
+### Step 3: Import AI Search Context Configuration
+The AI search agent relies on an `agentContext` document in Sanity that instructs the LLM on schema relationships (such as reverse references between lessons and courses):
+
+```bash
+# Import the AI Search Context document
+npx sanity dataset import scripts/seed/context.ndjson production --replace
+```
+
+### Step 4: Deploy the Studio UI
+> ⚠️ **Critical:** The Sanity Context MCP requires a deployed Studio application before it can serve dataset context to OpenAI.
+
+```bash
+npm run deploy
+# This deploys your Studio to https://<your-project-id>.sanity.studio
+```
+
+### Step 5: (Optional) Ingest Custom YouTube Video Transcripts
+To add your own YouTube videos to the search index with timestamped transcript chunking:
+
+```bash
+# Ingests video transcript into Sanity video documents
+npm run ingest -- --url="https://www.youtube.com/watch?v=YOUR_VIDEO_ID"
+```
+
+### Step 6: Generate TypeScript Types
+Regenerate frontend TypeScript types based on your populated schema:
+
+```bash
+npm run typegen
+```
+
+---
+
+## 🔍 Intelligent Search Pipeline
 
 ```
-User Query ("docker multi-stage build")
+User Query: "how to create a custom hook in React"
    │
    ▼
-[Next.js Server API: /api/search]
+[Next.js API Route Handler: /api/search]
    │
-   ├─► 1. Query Normalization & Technical Synonym Expansion (Docker → Container, DevOps)
-   ├─► 2. Conversational Stop-Word Filtering ("how do I", "explain")
-   ├─► 3. Connect to Sanity Context MCP (Injected schema & inline system prompt)
-   ├─► 4. OpenAI Model Generates Grounded GROQ Query
-   ├─► 5. Two-Stage Resolution:
-   │        ├── Priority 1: Authored Table of Contents / Chapters
-   │        └── Priority 2: Timestamped Transcript Chunks
+   ├─► 1. Query Normalization & Technical Synonym Expansion (Hook → State, Custom, Reusable)
+   ├─► 2. Conversational Stop-Word Filtering ("can you tell me", "how to")
+   ├─► 3. Connect to Sanity Context MCP (Injected schema + inline system prompt)
+   ├─► 4. OpenAI GPT-4o Generates Grounded GROQ Query
+   ├─► 5. Two-Stage Timestamp Resolution:
+   │        ├── Priority 1: Authored Chapter Markers (Clean topic titles)
+   │        └── Priority 2: Timestamped Transcript Chunks (Fallback speech search)
    │
    ▼
-Structured JSON Results (Lesson Cards + Timestamped Video Moment Cards)
+Structured JSON Output:
+   ├── Video Moment Cards (Course icon, lesson label, start second, seek link)
+   └── Lesson Cards (Course title, module number, key points, description)
 ```
 
-1. **Grounded Results:** The search agent only returns courses, lessons, and timestamps that exist in the Sanity dataset. It never hallucinates timestamps or prices.
-2. **Context Window Safety:** Never passes entire video transcripts wholesale; queries slice only top matched timestamp chunks.
-3. **Provider Seek Formats:** Deep-links generate player-specific seek URLs:
-   - YouTube: `https://www.youtube.com/embed/{id}?start={seconds}`
-   - Vimeo: `https://player.vimeo.com/video/{id}#t={seconds}s`
-   - Bunny: `https://iframe.mediadelivery.net/embed/{library}/{id}?t={seconds}`
-
 ---
 
-## 👤 Authentication, Progress Tracking & Bookmarking
+## ⚖️ Full Legal, Compliance & SEO Suite
 
-* **Authentication Boundaries:** Handled entirely by **Clerk**. The client browser never receives raw database write tokens.
-* **Learner Progress:** Lesson completions and resume timestamps are saved to the user's private Sanity `progress` document via `POST /api/progress`.
-* **Course Bookmarking:** Users can save courses to their **My Learning** dashboard. The bookmark button provides optimistic UI feedback, unauthenticated guest sign-in triggers, and persists to Sanity via `POST /api/bookmarks`.
-* **Private Dataset Isolation:** Data fetching uses server-only Sanity clients with `SANITY_API_READ_TOKEN` and mutations use `SANITY_API_WRITE_TOKEN`.
-
----
-
-## ⚖️ Legal, Compliance & Trust Suite
-
-Vertex includes a complete, production-ready legal and compliance infrastructure:
+Vertex includes a comprehensive, production-grade 9-part compliance suite:
 
 | Route | Shortcut Alias | Description |
 |---|---|---|
-| `/privacy-policy` | `/privacy` | Full GDPR & CCPA privacy notice detailing Clerk auth, Sanity storage, PostHog telemetry, and data deletion rights. |
-| `/terms-of-service` | `/terms` | Platform terms, educational portfolio disclaimer, YouTube embed terms, and DMCA safe harbor procedures. |
-| `/cookie-policy` | `/cookies` | Disclosure of essential auth cookies (`__session`), theme `localStorage`, PostHog telemetry, and embed player cookies. |
-| `/accessibility-statement` | `/accessibility` | Commitment to **WCAG 2.1 Level AA**, keyboard navigation, high contrast theme ratios, and accessibility contact. |
-| `/dmca` | `/dmca-policy` | Dedicated DMCA takedown procedure with 24–48h processing guarantee and Designated Agent info (`abhijeetrawat45@gmail.com`). |
+| `/privacy-policy` | `/privacy` | Full GDPR, UK GDPR, and CCPA/CPRA privacy notice detailing Clerk auth, Sanity storage, PostHog telemetry, and data subject rights. |
+| `/terms-of-service` | `/terms` | Platform terms of use, educational portfolio disclaimer, YouTube embed terms, and DMCA safe harbor procedures. |
+| `/cookie-policy` | `/cookies` | Categorized disclosure of essential auth cookies (`__session`), local storage (`vertex-theme`), and PostHog analytics. |
+| `/accessibility-statement` | `/accessibility` | Commitment to **WCAG 2.1 Level AA**, keyboard focus navigation, high-contrast light/dark themes, and screen reader landmarks. |
+| `/dmca` | `/dmca-policy` | Dedicated DMCA takedown policy with 24–48h processing guarantee and Designated Agent info (`abhijeetrawat45@gmail.com`). |
 | `/video-embedding-policy` | `/video-policy` | Architectural disclosure of third-party iframe embed streaming without downloading, altering, or re-hosting video media. |
-| `/security-notice` | `/security` | Token isolation architecture, TLS 1.3 transit encryption, rate limiting, and vulnerability disclosure policy. |
-| `/user-rights-portal` | `/user-rights` | Self-service data subject portal allowing learners to export their progress data (JSON) or submit erasure requests. |
+| `/security-notice` | `/security` | Token isolation architecture, TLS 1.3 transit encryption, rate limiting, and vulnerability disclosure reporting. |
+| `/user-rights-portal` | `/user-rights` | Interactive self-service data subject portal allowing learners to export their progress data (JSON) or submit erasure requests. |
 | `/data-processing-agreement` | `/dpa` | Demonstration GDPR Article 28 DPA detailing sub-processors (Clerk, Sanity, PostHog) and security measures. |
 | `/sitemap.xml` | — | Dynamic XML sitemap indexing all canonical routes with priority and change frequency metadata. |
 | `/robots.txt` | — | Search engine crawler rules allowing public content and disallowing internal API endpoints. |
 
 ---
 
-## ⚙️ Environment Configuration
+## ⚙️ Environment Variables Reference
 
-### 1. `web/` Environment Setup
-
-Create `web/.env.local` based on `web/.env.example`:
-
-```bash
-cp web/.env.example web/.env.local
-```
-
-Fill in the required keys:
+### `web/` Environment Setup (`web/.env.local`)
 
 ```env
-# Clerk Authentication
+# ─────────────────────────────────────────────────────────
+# Clerk Authentication (https://dashboard.clerk.com)
+# ─────────────────────────────────────────────────────────
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 
-# Sanity CMS
-NEXT_PUBLIC_SANITY_PROJECT_ID=your_sanity_project_id
+# ─────────────────────────────────────────────────────────
+# Sanity CMS (https://sanity.io/manage)
+# ─────────────────────────────────────────────────────────
+NEXT_PUBLIC_SANITY_PROJECT_ID=your_project_id
 NEXT_PUBLIC_SANITY_DATASET=production
 SANITY_API_READ_TOKEN=sk_viewer_token...
 SANITY_API_WRITE_TOKEN=sk_editor_token...
 SANITY_CONTEXT_MCP_URL=https://api.sanity.io/v2026-03-03/context/mcp/YOUR_PROJECT_ID/production/search-context
 
-# OpenAI (AI Search via AI SDK)
+# ─────────────────────────────────────────────────────────
+# OpenAI Platform (https://platform.openai.com)
+# ─────────────────────────────────────────────────────────
 OPENAI_API_KEY=sk-proj-...
 
-# PostHog Analytics
+# ─────────────────────────────────────────────────────────
+# PostHog Analytics (https://app.posthog.com)
+# ─────────────────────────────────────────────────────────
 NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=phc_...
 NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 
-# Canonical URL
+# ─────────────────────────────────────────────────────────
+# Site Canonical URL
+# ─────────────────────────────────────────────────────────
 NEXT_PUBLIC_SITE_URL=https://vertex.example.com
 ```
 
-### 2. `studio/` Environment Setup
+### `studio/` Environment Setup (`studio/.env.local`)
 
-Create `studio/.env.local`:
-
-```bash
-cp studio/.env.example studio/.env.local
+```env
+SANITY_STUDIO_PROJECT_ID=your_project_id
+SANITY_STUDIO_DATASET=production
+SANITY_API_WRITE_TOKEN=sk_editor_token...
 ```
 
 ---
 
-## 🚀 Getting Started Locally
+## 🚀 Running Locally
 
-### 1. Install Dependencies
 ```bash
-# In the studio workspace
-cd studio
-npm install
+# 1. Install workspace dependencies
+cd studio && npm install
+cd ../web && npm install
 
-# In the web workspace
-cd ../web
-npm install
-```
+# 2. Seed initial Sanity content (if fresh project)
+cd ../studio
+npx sanity dataset import scripts/seed/seed.ndjson production --replace
+npx sanity dataset import scripts/seed/context.ndjson production --replace
 
-### 2. Start Local Development Servers
-```bash
+# 3. Start development servers
 # Terminal 1: Sanity Studio (http://localhost:3333)
-cd studio
-npm run dev
+cd studio && npm run dev
 
 # Terminal 2: Next.js Web App (http://localhost:3000)
-cd web
-npm run dev
+cd web && npm run dev
 ```
 
 ---
 
 ## 🧪 Testing & Code Quality
 
-Run tests and type checks from `web/`:
+Execute tests and validation from `web/`:
 
 ```bash
 cd web
 
-# 1. Run all unit tests (150+ tests covering search, video controls, bookmarks, compliance)
+# Run full unit test suite (150 tests covering search, video controls, bookmarks, compliance)
 npm test
 
-# 2. Strict TypeScript type check
+# Strict TypeScript type check
 npm run type-check
 
-# 3. ESLint code quality inspection
+# ESLint code inspection
 npm run lint
 
-# 4. Production build validation (Turbopack)
+# Production build validation with Turbopack
 npm run build
 ```
 
@@ -209,14 +287,14 @@ npm run build
 
 ## 🚢 Deployment
 
-### 1. Web Deployment (Vercel)
+### 1. Web Deployment (Vercel — Recommended)
 1. Push your repository to GitHub.
-2. Import the repo in [Vercel](https://vercel.com) and configure **Root Directory** as `web`.
-3. Add all environment variables from `web/.env.example`.
+2. Import the project into [Vercel](https://vercel.com) and set the **Root Directory** to `web`.
+3. Add all environment variables from `web/.env.example` in the Vercel dashboard.
 4. Deploy.
 
 ### 2. Sanity Studio Deployment
-Deploy the Studio UI to Sanity's managed cloud hosting (required for Context MCP):
+Deploy the Studio UI to Sanity's managed cloud (required for Context MCP):
 ```bash
 cd studio
 npm run deploy
@@ -226,11 +304,11 @@ npm run deploy
 
 ## 👨‍💻 Developer & Contact
 
-**Vertex** is crafted by **Abhijeet Rawat** as an engineering demonstration and educational platform.
+**Vertex** is engineered by **Abhijeet Rawat** as a portfolio and educational demonstration.
 
 * **Developer:** Abhijeet Rawat
-* **Contact & DMCA Agent:** [abhijeetrawat45@gmail.com](mailto:abhijeetrawat45@gmail.com)
-* **Repository:** [https://github.com/Abhijith45/vertex-lms](https://github.com/Abhijith45/vertex-lms)
+* **Email & DMCA Agent:** [abhijeetrawat45@gmail.com](mailto:abhijeetrawat45@gmail.com)
+* **GitHub Repository:** [https://github.com/Abhijith45/vertex-lms](https://github.com/Abhijith45/vertex-lms)
 
 ---
 
