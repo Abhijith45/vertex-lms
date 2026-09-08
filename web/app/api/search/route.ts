@@ -12,8 +12,33 @@ import { normalizeSearchQuery, resolveVideoMomentsTwoStage } from "@/lib/utils/s
 
 export const maxDuration = 60; // Allow enough time for multi-step MCP tool calls
 
+interface LessonResult {
+  title: string;
+  slug: string;
+  description: string;
+  courseTitle: string;
+  moduleLabel?: string;
+  keyPoints?: string[];
+}
+
+interface VideoMomentResult {
+  lessonTitle: string;
+  lessonSlug: string;
+  courseTitle: string;
+  courseIcon?: string;
+  description: string;
+  startSeconds: number;
+  thumbnailUrl?: string;
+  clipLength?: string;
+}
+
+interface SearchResults {
+  lessons: LessonResult[];
+  videoMoments: VideoMomentResult[];
+}
+
 // In-memory search result cache: 100 entries, 15-minute TTL
-const searchResultCache = new SimpleMemoryCache<{ lessons: any[]; videoMoments: any[] }>({
+const searchResultCache = new SimpleMemoryCache<SearchResults>({
   maxEntries: 100,
   defaultTtlMs: 15 * 60 * 1000,
 });
@@ -21,7 +46,7 @@ const searchResultCache = new SimpleMemoryCache<{ lessons: any[]; videoMoments: 
 function trackSearchServer(
   userId: string | null,
   query: string,
-  results: { lessons: any[]; videoMoments: any[] },
+  results: SearchResults,
   isCached: boolean
 ) {
   try {
@@ -47,8 +72,8 @@ function trackSearchServer(
 }
 
 // Cached initial context singleton (Section 12 of AGENTS.md)
-let cachedInitialContext: any = null;
-let initialContextPromise: Promise<any> | null = null;
+let cachedInitialContext: unknown = null;
+let initialContextPromise: Promise<unknown> | null = null;
 
 // Initialize MCP Client
 async function getMcpClient() {
@@ -161,7 +186,11 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
 - If no lessons or video moments match the query in the database, call \`return_search_results\` with empty arrays (\`{ lessons: [], videoMoments: [] }\`). Never invent fallback content.
 `;
 
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(new Error("WAKING_UP")), 8000);
+
     const { toolCalls } = await generateText({
+      abortSignal: abortController.signal,
       model: openai("gpt-4o"),
       system: systemPrompt,
       prompt: `Analyze this user search query and find matching content in Sanity: "${query}"`,
@@ -193,7 +222,7 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
               })
             ),
           }),
-          execute: async (input: any) => input,
+          execute: async (input) => input as SearchResults,
         }),
       },
       stopWhen: (options) => {
@@ -207,16 +236,19 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
       },
     });
 
+    clearTimeout(timeoutId);
+
     const resultToolCall = toolCalls.find(
       (tc) => tc.toolName === "return_search_results"
     );
 
-    let finalResults: { lessons: any[]; videoMoments: any[] };
+    let finalResults: SearchResults;
     if (resultToolCall) {
-      const output = (resultToolCall as any).input || (resultToolCall as any).args;
+      const tc = resultToolCall as { input?: SearchResults; args?: SearchResults };
+      const output = tc.input ?? tc.args;
       finalResults = {
-        lessons: output.lessons || [],
-        videoMoments: output.videoMoments || [],
+        lessons: output?.lessons ?? [],
+        videoMoments: output?.videoMoments ?? [],
       };
     } else {
       finalResults = { lessons: [], videoMoments: [] };
@@ -237,7 +269,15 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
     // Otherwise fall through to Sanity GROQ search for maximum recall
     throw new Error("No MCP results returned, executing direct Sanity search");
   } catch (error: any) {
-    console.warn("Search LLM/MCP error or fallback triggered:", error.message);
+    if (error?.message === "WAKING_UP" || error?.name === "AbortError" || error?.cause?.message === "WAKING_UP") {
+      return NextResponse.json(
+        { status: "waking_up", message: "Content is loading..." },
+        { status: 503 }
+      );
+    }
+
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.warn("Search LLM/MCP error or fallback triggered:", errMsg);
     
     // Direct Sanity GROQ Search Fallback
     try {
@@ -312,8 +352,8 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
         }
       }
 
-      const fallbackResults = {
-        lessons: matchedLessons.filter((l: any) => l.courseTitle && l.slug),
+      const fallbackResults: SearchResults = {
+        lessons: (matchedLessons as LessonResult[]).filter((l) => l.courseTitle && l.slug),
         videoMoments,
       };
 
@@ -325,9 +365,10 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
           "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
         },
       });
-    } catch (fallbackError: any) {
+    } catch (fallbackError: unknown) {
+      const errMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
       console.error("Direct search fallback error:", fallbackError);
-      return NextResponse.json({ error: fallbackError.message }, { status: 500 });
+      return NextResponse.json({ error: errMsg }, { status: 500 });
     }
   }
 }

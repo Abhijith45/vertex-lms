@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Loader2, BookOpen, ArrowRight, X } from "lucide-react";
 import posthog from "posthog-js";
@@ -26,17 +26,21 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
 
   // Sync initialQuery when it changes externally (e.g. navigation), without opening dropdown
   useEffect(() => {
-    setQuery(initialQuery);
-    setIsOpen(false);
+    startTransition(() => {
+      setQuery(initialQuery);
+      setIsOpen(false);
+    });
   }, [initialQuery]);
 
   // Debounced search suggestion fetch with instant client-side cache
   useEffect(() => {
     const trimmed = query.trim();
     if (trimmed.length < 2) {
-      setKeywords([]);
-      setCourses([]);
-      setIsOpen(false);
+      startTransition(() => {
+        setKeywords([]);
+        setCourses([]);
+        setIsOpen(false);
+      });
       return;
     }
 

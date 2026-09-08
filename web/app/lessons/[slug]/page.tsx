@@ -35,6 +35,7 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
   const startSeconds = Number.isFinite(rawStart) && rawStart > 0 ? Math.floor(rawStart) : 0;
 
   // Fetch lesson data and reverse-referenced parent course with ISR caching
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let lesson: any = null;
   try {
     lesson = await sanityFetch({

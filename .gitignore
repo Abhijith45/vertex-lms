@@ -16,5 +16,26 @@ npm-debug.log*
 yarn-debug.log*
 *.tsbuildinfo
 
-prompts
+# Next.js build output
+.next/
+out/
+build/
+
+# Sanity Studio build
+studio/dist/
+
+# Vercel
+.vercel
+
+# Dev-only directories (IDE agent configs, scratch work)
+agent/
+Rawat/
+Rawat/*
+
+# Developer artifacts (not application code)
+prompts/
 prompts/*
+posthog-self-driving-report.md
+CLAUDE.md
+design/
+design/*

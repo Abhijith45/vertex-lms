@@ -153,7 +153,8 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
   const resolvedSlug = isDesignMockSlug ? "nextjs-app-router-in-depth" : slug;
 
   // Fetch course data from Sanity with ISR caching
-  let course = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let course: any = null;
   try {
     course = await sanityFetch({
       query: getCourseBySlugQuery,
@@ -184,8 +185,10 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
   }
 
   // Calculate total duration across all lessons
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allLessons = course.modules?.flatMap((m: any) => m.lessons || []) || [];
   const calculatedDurationSeconds = allLessons.reduce(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (total: number, lesson: any) => total + (lesson?.duration || 0),
     0
   );

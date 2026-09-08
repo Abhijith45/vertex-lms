@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "type-check": "tsc --noEmit",
     "lint": "eslint",
     "test": "node --test test/lesson-utils.test.ts test/video-controls.test.ts test/search-flow.test.ts test/cache.test.ts test/search-openai.test.ts test/posthog-events.test.ts test/search-thumbnails.test.ts test/two-stage-timestamp.test.ts test/auth-gate.test.ts test/theme.test.ts"
   },
@@ -13,7 +14,6 @@
     "@ai-sdk/openai": "^4.0.57",
     "@clerk/nextjs": "^7.8.4",
     "@sanity/image-url": "^2.1.1",
-    "@sanity/vision": "^5.31.2",
     "ai": "^7.0.91",
     "lucide-react": "^1.39.0",
     "next": "16.3.3",
@@ -27,6 +27,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@sanity/vision": "^5.31.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

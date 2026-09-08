@@ -36,8 +36,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ message: "Missing tag or path parameter to revalidate" }, { status: 400 });
-  } catch (error: any) {
-    return NextResponse.json({ message: "Revalidation failed", error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ message: "Revalidation failed", error: message }, { status: 500 });
   }
 }
 
@@ -61,7 +62,8 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json({ message: "Missing tag or path parameter to revalidate" }, { status: 400 });
-  } catch (error: any) {
-    return NextResponse.json({ message: "Revalidation failed", error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ message: "Revalidation failed", error: message }, { status: 500 });
   }
 }

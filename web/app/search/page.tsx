@@ -48,9 +48,13 @@ function SearchContent() {
   const [results, setResults] = useState<SearchResults | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isWakingUp, setIsWakingUp] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let isMounted = true;
+
     async function fetchResults() {
       if (!query.trim()) {
         setResults(null);
@@ -63,8 +67,21 @@ function SearchContent() {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
+          
+          // Handle Render cold start gracefully
+          if (res.status === 503 && errData.status === "waking_up") {
+            if (isMounted) {
+              setIsWakingUp(true);
+              timeoutId = setTimeout(fetchResults, 5000);
+            }
+            return; // Return early, don't set loading to false or throw error
+          }
+          
           throw new Error(errData.message || errData.error || "Failed to fetch search results");
         }
+        
+        if (!isMounted) return;
+        setIsWakingUp(false);
         const data = await res.json();
         const lessons = data.lessons || [];
         const videoMoments = data.videoMoments || [];
@@ -84,13 +101,23 @@ function SearchContent() {
           source: "search_page",
         });
       } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Failed to fetch search results");
+        if (isMounted) {
+          setError(err instanceof Error ? err.message : "Failed to fetch search results");
+          setIsWakingUp(false);
+        }
       } finally {
-        setIsLoading(false);
+        if (isMounted && !timeoutId) {
+          setIsLoading(false);
+        }
       }
     }
 
     fetchResults();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
   }, [query]);
 
   // Combine items for ordered pagination
@@ -150,7 +177,14 @@ function SearchContent() {
             </div>
 
             {/* Loading Skeleton State */}
-            {isLoading ? (
+            {isWakingUp ? (
+              <div className="w-full py-20 flex flex-col items-center justify-center text-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary-500 mb-4" />
+                <p className="text-lg font-medium text-neutral-800 dark:text-neutral-200">
+                  Content is loading...
+                </p>
+              </div>
+            ) : isLoading ? (
               <div className="w-full space-y-4">
                 {/* Result Count and Sort Selector Skeleton */}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1 pb-4 animate-pulse">

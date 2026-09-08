@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, startTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Loader2, X, TrendingUp, BookOpen, ArrowRight, CornerDownLeft } from "lucide-react";
 import posthog from "posthog-js";
@@ -41,8 +41,10 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
   // Sync initial query when opened
   useEffect(() => {
     if (isOpen) {
-      setQuery(initialQuery);
-      setSelectedIndex(-1);
+      startTransition(() => {
+        setQuery(initialQuery);
+        setSelectedIndex(-1);
+      });
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen, initialQuery]);
@@ -53,8 +55,10 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
 
     const trimmed = query.trim();
     if (trimmed.length < 2) {
-      setKeywords([]);
-      setCourses([]);
+      startTransition(() => {
+        setKeywords([]);
+        setCourses([]);
+      });
       return;
     }
 
@@ -108,7 +112,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
   if (!isOpen) return null;
 
   // Flatten items for keyboard navigation
-  const allItems: Array<{ type: "keyword" | "course"; value: any }> = [
+  const allItems: Array<{ type: "keyword" | "course"; value: string | CourseSuggestion }> = [
     ...keywords.map((k) => ({ type: "keyword" as const, value: k })),
     ...courses.map((c) => ({ type: "course" as const, value: c })),
   ];
@@ -140,9 +144,9 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
     if (selectedIndex >= 0 && selectedIndex < allItems.length) {
       const selected = allItems[selectedIndex];
       if (selected.type === "keyword") {
-        handleSelectKeyword(selected.value);
+        handleSelectKeyword(selected.value as string);
       } else {
-        handleSelectCourse(selected.value.slug);
+        handleSelectCourse((selected.value as CourseSuggestion).slug);
       }
     } else if (query.trim()) {
       posthog.capture("search_submitted", {
@@ -341,7 +345,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
               {/* Empty state when query produces no matches */}
               {!isLoading && keywords.length === 0 && courses.length === 0 && (
                 <div className="py-8 text-center text-sm text-neutral-500">
-                  <p>No direct suggestions found for "{query}".</p>
+                  <p>No direct suggestions found for &quot;{query}&quot;.</p>
                   <button
                     type="button"
                     onClick={() => handleSelectKeyword(query)}

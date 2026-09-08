@@ -94,7 +94,7 @@ export const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2] as const;
  * Cycle to the next playback rate.
  */
 export function getNextPlaybackRate(currentRate: number): number {
-  const index = PLAYBACK_RATES.indexOf(currentRate as any);
+  const index = PLAYBACK_RATES.indexOf(currentRate as (typeof PLAYBACK_RATES)[number]);
   if (index === -1 || index === PLAYBACK_RATES.length - 1) {
     return PLAYBACK_RATES[0];
   }
