@@ -34,6 +34,26 @@ const nextConfig: NextConfig = {
         destination: "/cookie-policy",
         permanent: true,
       },
+      {
+        source: "/accessibility",
+        destination: "/accessibility-statement",
+        permanent: true,
+      },
+      {
+        source: "/dmca-policy",
+        destination: "/dmca",
+        permanent: true,
+      },
+      {
+        source: "/video-policy",
+        destination: "/video-embedding-policy",
+        permanent: true,
+      },
+      {
+        source: "/terms-of-use-for-embed-videos",
+        destination: "/video-embedding-policy",
+        permanent: true,
+      },
     ];
   },
   // This is required to support PostHog trailing slash API requests

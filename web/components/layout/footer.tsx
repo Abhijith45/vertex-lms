@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Mail, Shield, FileText, Cookie, GraduationCap, ArrowUpRight, Heart } from "lucide-react";
+import { Mail, Shield, FileText, Cookie, GraduationCap, Heart, Accessibility, ShieldAlert, Video } from "lucide-react";
 import { VertexLogo } from "@/components/home/vertex-logo";
 
 export function Footer() {
@@ -102,11 +102,29 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/terms-of-service#dmca-takedown"
-                  className="inline-flex items-center gap-1 text-xs text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200 transition-colors"
+                  href="/accessibility-statement"
+                  className="inline-flex items-center gap-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors"
                 >
-                  <span>DMCA & Content Takedown</span>
-                  <ArrowUpRight className="h-3 w-3" />
+                  <Accessibility className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500" />
+                  <span>Accessibility</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/dmca"
+                  className="inline-flex items-center gap-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors"
+                >
+                  <ShieldAlert className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500" />
+                  <span>DMCA & Copyright</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/video-embedding-policy"
+                  className="inline-flex items-center gap-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors"
+                >
+                  <Video className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500" />
+                  <span>Video-Embedding Policy</span>
                 </Link>
               </li>
             </ul>
@@ -148,7 +166,7 @@ export function Footer() {
             <span>by <strong className="font-medium text-neutral-700 dark:text-neutral-300">Abhijeet Rawat</strong>.</span>
           </div>
 
-          <div className="flex items-center gap-4 text-xs">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <Link href="/privacy-policy" className="hover:underline">
               Privacy
             </Link>
@@ -159,6 +177,18 @@ export function Footer() {
             <span>•</span>
             <Link href="/cookie-policy" className="hover:underline">
               Cookies
+            </Link>
+            <span>•</span>
+            <Link href="/accessibility-statement" className="hover:underline">
+              Accessibility
+            </Link>
+            <span>•</span>
+            <Link href="/dmca" className="hover:underline">
+              DMCA
+            </Link>
+            <span>•</span>
+            <Link href="/video-embedding-policy" className="hover:underline">
+              Video Policy
             </Link>
           </div>
         </div>
