@@ -13,12 +13,15 @@ export const metadata = {
   description: "Browse the complete catalog of in-depth engineering courses.",
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function AllCoursesPage() {
   // Fetch courses and categories in parallel from Sanity with ISR caching
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let rawCourses: any[] = [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let rawCategories: any[] = [];
+  let userCompletedLessonIds = new Set<string>();
 
   try {
     const [coursesRes, categoriesRes] = await Promise.all([
@@ -31,16 +34,52 @@ export default async function AllCoursesPage() {
     console.error("Error fetching courses catalog data from Sanity:", error);
   }
 
+  try {
+    const { auth } = await import("@clerk/nextjs/server");
+    const authData = await auth();
+    const userId = authData?.userId;
+    if (userId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const progressDoc = (await sanityFetch({
+        query: `*[_type == "progress" && clerkUserId == $userId][0] { completedLessons }`,
+        params: { userId },
+        tags: [`progress-${userId}`],
+        revalidate: 0,
+      })) as any;
+      if (progressDoc && Array.isArray(progressDoc.completedLessons)) {
+        userCompletedLessonIds = new Set(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          progressDoc.completedLessons.map((ref: any) => ref._ref).filter(Boolean)
+        );
+      }
+    }
+  } catch (err) {
+    console.error("Error fetching progress for courses catalog:", err);
+  }
+
   // Format courses data for client view
   const processedCourses: CourseCatalogItem[] = rawCourses.map((c) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const courseLessons = c.modules?.flatMap((m: any) => m.lessons || []) || [];
     const totalSeconds =
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      c.modules?.flatMap((m: any) => m.lessons || []).reduce(
+      courseLessons.reduce(
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (acc: number, l: any) => acc + (l?.duration || 0),
         0
       ) || 0;
+
+    let progressPercentage = 0;
+    if (courseLessons.length > 0 && userCompletedLessonIds.size > 0) {
+      let completedInCourse = 0;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const l of courseLessons) {
+        if (l?._id && userCompletedLessonIds.has(l._id)) {
+          completedInCourse++;
+        }
+      }
+      progressPercentage = Math.round((completedInCourse / courseLessons.length) * 100);
+    }
 
     const levelDisplay = c.level
       ? c.level.charAt(0).toUpperCase() + c.level.slice(1)
@@ -56,6 +95,7 @@ export default async function AllCoursesPage() {
       modulesCount: c.modulesCount || c.modules?.length || 4,
       popular: c.popular,
       studentCount: c.studentCount,
+      progressPercentage: progressPercentage > 0 ? progressPercentage : undefined,
       category: c.category
         ? {
             title: c.category.title,

@@ -16,13 +16,18 @@ interface LessonSidebarProps {
   course: CurriculumCourse;
   currentLessonSlug: string;
   activeModuleIndex: number;
+  progressPercentage?: number;
+  completedLessonIds?: string[];
 }
 
 export function LessonSidebar({
   course,
   currentLessonSlug,
   activeModuleIndex = 0,
+  progressPercentage = 0,
+  completedLessonIds = [],
 }: LessonSidebarProps) {
+  const completedSet = new Set(completedLessonIds);
   // State for expanded module indices (active module open by default)
   const [expandedIndices, setExpandedIndices] = useState<number[]>([activeModuleIndex]);
 
@@ -57,7 +62,7 @@ export function LessonSidebar({
               {course.title || "Next.js for Production"}
             </h2>
             <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium block mt-0.5">
-              35% complete
+              {progressPercentage}% complete
             </span>
           </div>
         </div>
@@ -75,7 +80,10 @@ export function LessonSidebar({
           {modules.map((module, mIdx) => {
             const isExpanded = expandedIndices.includes(mIdx);
             const isActiveModule = mIdx === activeModuleIndex;
-            const isCompleted = mIdx < activeModuleIndex;
+            const isCompleted =
+              Boolean(module.lessons &&
+              module.lessons.length > 0 &&
+              module.lessons.every((l) => l._id && completedSet.has(l._id)));
             const moduleNumber = mIdx + 1;
 
             const modDurationSeconds =
@@ -149,6 +157,7 @@ export function LessonSidebar({
                           ? (lesson.slug as { current?: string })?.current || ""
                           : lesson.slug;
                       const isCurrentLesson = lessonSlug === currentLessonSlug;
+                      const isLessonCompleted = Boolean(lesson._id && completedSet.has(lesson._id));
 
                       return (
                         <Link
@@ -171,16 +180,22 @@ export function LessonSidebar({
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            {/* Dot indicator */}
-                            <div
-                              className={`h-2 w-2 rounded-full shrink-0 ${
-                                isCurrentLesson
-                                  ? "bg-[#E05A36]"
-                                  : "border border-neutral-300 dark:border-neutral-600 bg-transparent"
-                              }`}
-                            />
+                            {/* Dot or Checkmark indicator */}
+                            {isLessonCompleted && !isCurrentLesson ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-[#E05A36] shrink-0" />
+                            ) : (
+                              <div
+                                className={`h-2 w-2 rounded-full shrink-0 ${
+                                  isCurrentLesson
+                                    ? "bg-[#E05A36]"
+                                    : "border border-neutral-300 dark:border-neutral-600 bg-transparent"
+                                }`}
+                              />
+                            )}
                             <div className="min-w-0 truncate">
-                              <span className="block truncate">{lesson.title}</span>
+                              <span className={`block truncate ${isLessonCompleted && !isCurrentLesson ? "text-neutral-500 dark:text-neutral-400" : ""}`}>
+                                {lesson.title}
+                              </span>
                               {isCurrentLesson && (
                                 <span className="text-[10px] font-semibold text-[#E05A36] block">
                                   Now playing

@@ -93,13 +93,23 @@ export function getHomeUrl(): string {
   return "/";
 }
 
-export type FallbackThumbnailType = "nextjs" | "react" | "default";
+export type FallbackThumbnailType =
+  | "docker"
+  | "nextjs"
+  | "react"
+  | "python"
+  | "postgres"
+  | "ai"
+  | "security"
+  | "system-design"
+  | "typescript"
+  | "rag"
+  | "default";
 
 /**
  * Resolves which fallback thumbnail icon to use based on course and lesson context.
- * 1. Next.js logo: if courseTitle, lessonTitle, or lessonSlug contains "next"
- * 2. React logo: if courseTitle, lessonTitle, or lessonSlug contains "react"
- * 3. Default code logo: any other topic
+ * Matches specific course categories (Docker, Next.js, React, Python, Postgres, AI, Security, System Design, TypeScript, RAG),
+ * falling back to "default" (code icon) when no specific match is found.
  */
 export function resolveFallbackThumbnailType(
   courseTitle?: string,
@@ -107,12 +117,38 @@ export function resolveFallbackThumbnailType(
   lessonSlug?: string
 ): FallbackThumbnailType {
   const combined = `${courseTitle || ""} ${lessonTitle || ""} ${lessonSlug || ""}`.toLowerCase();
+  
   if (combined.includes("next")) {
     return "nextjs";
+  }
+  if (combined.includes("docker") || combined.includes("kubernetes") || combined.includes("devops")) {
+    return "docker";
+  }
+  if (combined.includes("typescript")) {
+    return "typescript";
   }
   if (combined.includes("react")) {
     return "react";
   }
+  if (combined.includes("python") || combined.includes("pandas")) {
+    return "python";
+  }
+  if (combined.includes("postgres") || combined.includes("database") || combined.includes("sql")) {
+    return "postgres";
+  }
+  if (combined.includes("rag") || combined.includes("retrieval-augmented") || combined.includes("retrieval augmented")) {
+    return "rag";
+  }
+  if (combined.includes("ai") || combined.includes("llm") || combined.includes("prompt")) {
+    return "ai";
+  }
+  if (combined.includes("system-design") || combined.includes("system design") || combined.includes("distributed system")) {
+    return "system-design";
+  }
+  if (combined.includes("security") || combined.includes("vulnerabilit")) {
+    return "security";
+  }
+
   return "default";
 }
 
@@ -171,3 +207,77 @@ export function resolveVideoMomentsTwoStage(
   return [];
 }
 
+const COMMON_STOP_WORDS = new Set([
+  "a", "an", "the", "in", "on", "at", "to", "for", "with", "from",
+  "by", "about", "how", "what", "is", "are", "of", "and", "or", "can",
+  "you", "do", "does", "i", "we", "my", "your", "find", "show", "me"
+]);
+
+const SYNONYM_MAP: Record<string, string[]> = {
+  docker: ["container", "dockerfile", "compose", "devops"],
+  container: ["docker", "kubernetes", "k8s"],
+  k8s: ["kubernetes", "cluster", "container"],
+  kubernetes: ["k8s", "cluster", "container"],
+  auth: ["authentication", "clerk", "login", "session", "jwt"],
+  authentication: ["auth", "clerk", "login", "session"],
+  clerk: ["auth", "authentication", "login"],
+  next: ["nextjs", "react", "app router", "server components"],
+  nextjs: ["next", "react", "app router", "server components"],
+  postgres: ["postgresql", "sql", "database"],
+  postgresql: ["postgres", "sql", "database"],
+  database: ["postgres", "postgresql", "sql"],
+  sql: ["postgres", "postgresql", "database"],
+  ai: ["llm", "openai", "rag", "prompt"],
+  llm: ["ai", "openai", "prompt", "rag"],
+  security: ["vulnerability", "auth", "owasp", "encryption"],
+  ts: ["typescript"],
+  typescript: ["ts"],
+  py: ["python"],
+  python: ["py"],
+};
+
+export interface ProcessedSearchQuery {
+  rawQuery: string;
+  cleanTokens: string[];
+  queryPattern: string;
+  orConditions: string[];
+  expandedTerms: string[];
+}
+
+/**
+ * Preprocesses a raw search query by stripping stop words, tokenizing,
+ * and expanding with domain-specific technical synonyms.
+ */
+export function processSearchQuery(rawQuery: string): ProcessedSearchQuery {
+  const normalized = normalizeSearchQuery(rawQuery);
+  const words = normalized
+    .replace(/[^a-zA-Z0-9\s]/g, " ")
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  const nonStopWords = words.filter((w) => !COMMON_STOP_WORDS.has(w));
+  const effectiveWords = nonStopWords.length > 0 ? nonStopWords : words;
+
+  const synonymSet = new Set<string>();
+  for (const word of effectiveWords) {
+    const syns = SYNONYM_MAP[word];
+    if (syns) {
+      syns.forEach((s) => synonymSet.add(s));
+    }
+  }
+
+  const cleanTokens = effectiveWords;
+  const queryPattern = cleanTokens.length > 0 ? `*${cleanTokens.join("*")}*` : `*${normalized}*`;
+  const allTerms = Array.from(new Set([...cleanTokens, ...synonymSet]));
+  const orConditions = allTerms.map((t) => `*${t}*`);
+
+  return {
+    rawQuery: normalized,
+    cleanTokens,
+    queryPattern,
+    orConditions,
+    expandedTerms: allTerms,
+  };
+}

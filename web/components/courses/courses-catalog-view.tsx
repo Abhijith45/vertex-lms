@@ -16,6 +16,7 @@ export interface CourseCatalogItem {
   modulesCount: number;
   popular?: boolean;
   studentCount?: number;
+  progressPercentage?: number;
   category?: {
     title: string;
     slug: string;
@@ -103,9 +104,10 @@ export function CoursesCatalogView({
   return (
     <div>
       {/* ──────────────────────────────────────────────────────────
-         SEARCH & FILTER TOOLBAR
+         STICKY SEARCH & FILTER TOOLBAR
+         Locks under Navbar at top-20 with z-20 so courses scroll behind it
          ────────────────────────────────────────────────────────── */}
-      <div className="mb-10 space-y-6">
+      <div className="sticky top-20 z-20 -mx-6 px-6 sm:-mx-12 sm:px-12 lg:-mx-16 lg:px-16 py-4 mb-8 bg-white/95 dark:bg-[#0F172A]/95 backdrop-blur-md transition-all border-b border-neutral-100/80 dark:border-neutral-800/80 space-y-4">
         {/* Search Bar */}
         <div className="relative max-w-xl">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-neutral-400 dark:text-neutral-500">
@@ -131,7 +133,7 @@ export function CoursesCatalogView({
         </div>
 
         {/* Category Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 pt-1">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 pt-0.5">
           {/* "All" button */}
           <button
             type="button"
@@ -186,34 +188,32 @@ export function CoursesCatalogView({
             );
           })}
         </div>
-      </div>
 
-      {/* ──────────────────────────────────────────────────────────
-         RESULTS COUNT & SUMMARY
-         ────────────────────────────────────────────────────────── */}
-      <div className="mb-6 flex items-center justify-between text-sm text-neutral-500 dark:text-neutral-400">
-        <span>
-          Showing <strong className="text-neutral-900 dark:text-neutral-100 font-semibold">{filteredCourses.length}</strong>{" "}
-          {filteredCourses.length === 1 ? "course" : "courses"}
-          {selectedCategory !== "all" && (
-            <>
-              {" "}in{" "}
-              <span className="text-primary-600 dark:text-primary-400 font-medium">
-                {categories.find((c) => c.slug === selectedCategory)?.title}
-              </span>
-            </>
+        {/* Results Count & Summary */}
+        <div className="flex items-center justify-between text-xs sm:text-sm text-neutral-500 dark:text-neutral-400 pt-1">
+          <span>
+            Showing <strong className="text-neutral-900 dark:text-neutral-100 font-semibold">{filteredCourses.length}</strong>{" "}
+            {filteredCourses.length === 1 ? "course" : "courses"}
+            {selectedCategory !== "all" && (
+              <>
+                {" "}in{" "}
+                <span className="text-primary-600 dark:text-primary-400 font-medium">
+                  {categories.find((c) => c.slug === selectedCategory)?.title}
+                </span>
+              </>
+            )}
+          </span>
+
+          {(selectedCategory !== "all" || searchQuery) && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline cursor-pointer"
+            >
+              Reset all filters
+            </button>
           )}
-        </span>
-
-        {(selectedCategory !== "all" || searchQuery) && (
-          <button
-            type="button"
-            onClick={handleResetFilters}
-            className="text-xs font-medium text-primary-600 dark:text-primary-400 hover:underline cursor-pointer"
-          >
-            Reset all filters
-          </button>
-        )}
+        </div>
       </div>
 
       {/* ──────────────────────────────────────────────────────────
@@ -233,6 +233,7 @@ export function CoursesCatalogView({
               modules={c.modulesCount}
               category={c.category?.title}
               popular={c.popular}
+              progressPercentage={c.progressPercentage}
             />
           ))}
         </div>

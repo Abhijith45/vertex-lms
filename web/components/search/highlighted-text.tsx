@@ -36,7 +36,7 @@ export function HighlightedText({ text, query, className = "" }: HighlightedText
         return isMatch ? (
           <mark
             key={idx}
-            className="bg-amber-100 text-neutral-900 font-semibold px-0.5 rounded-xs"
+            className="bg-amber-100 text-neutral-900 font-bold px-0.5 rounded-xs"
           >
             {part}
           </mark>

@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { writeClient } from "@/sanity/lib/write-client";
+import { serverClient } from "@/sanity/lib/client";
+import { revalidateTag } from "next/cache";
 
 interface ProgressRequestBody {
   lessonSlug: string;
@@ -73,6 +76,91 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "lessonSlug is empty after sanitization" }, { status: 400 });
   }
 
+  // --- Start Sanity Progress Saving ---
+  try {
+    // 1. Get the lesson document ID
+    const lessonDoc = await serverClient.fetch(
+      `*[_type == "lesson" && slug.current == $slug][0]{_id}`, 
+      { slug: lessonSlug },
+      { cache: "no-store" }
+    );
+    
+    if (lessonDoc?._id) {
+      // 2. Fetch or create progress document for user
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let progressDoc: any = await serverClient.fetch(
+        `*[_type == "progress" && clerkUserId == $userId][0]`, 
+        { userId },
+        { cache: "no-store" }
+      );
+      
+      if (!progressDoc) {
+        progressDoc = await writeClient.create({
+          _type: "progress",
+          clerkUserId: userId,
+          completedLessons: [],
+          resumePositions: [],
+        });
+      }
+
+      // 3. Prepare mutation
+      const tx = writeClient.transaction();
+      let shouldCommit = false;
+
+      // Update resume position
+      if (typeof positionSeconds === "number") {
+        const existingPositions = progressDoc.resumePositions || [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const filteredPositions = existingPositions.filter((p: any) => p.lesson?._ref !== lessonDoc._id);
+        
+        tx.patch(progressDoc._id, (p) => 
+          p.set({
+            resumePositions: [
+              ...filteredPositions,
+              {
+                _key: Math.random().toString(36).substring(2, 9),
+                lesson: { _type: "reference", _ref: lessonDoc._id },
+                positionSeconds
+              }
+            ]
+          })
+        );
+        shouldCommit = true;
+      }
+
+      // Update completion
+      if (completed) {
+        const existingCompleted = progressDoc.completedLessons || [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const alreadyCompleted = existingCompleted.some((ref: any) => ref._ref === lessonDoc._id);
+        
+        if (!alreadyCompleted) {
+          tx.patch(progressDoc._id, (p) => 
+            p.setIfMissing({ completedLessons: [] })
+             .append('completedLessons', [{ _key: Math.random().toString(36).substring(2, 9), _type: "reference", _ref: lessonDoc._id }])
+          );
+          shouldCommit = true;
+        }
+      }
+
+      if (shouldCommit) {
+        await tx.commit();
+        try {
+          revalidateTag(`progress-${userId}`, "max");
+        } catch (tagErr) {
+          console.warn("revalidateTag warning:", tagErr);
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Error saving progress to Sanity:", err);
+    return NextResponse.json(
+      { error: "Failed to save progress to database", details: err instanceof Error ? err.message : String(err) },
+      { status: 500 }
+    );
+  }
+  // --- End Sanity Progress Saving ---
+
   // Capture server-side analytics with PostHog
   try {
     const posthog = getPostHogClient();
@@ -114,7 +202,7 @@ export async function POST(req: Request) {
       courseSlug,
       positionSeconds,
       completed,
-      userId: "authenticated",
+      userId,
     },
   });
 }

@@ -1,6 +1,6 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeSearchQuery, formatSearchUrl } from "../lib/utils/search.ts";
+import { normalizeSearchQuery, formatSearchUrl, processSearchQuery } from "../lib/utils/search.ts";
 
 describe("OpenAI Search Analyzer & Query Processing Unit Tests", () => {
   const testKeywords = [
@@ -128,6 +128,38 @@ describe("OpenAI Search Analyzer & Query Processing Unit Tests", () => {
         const encodedParam = url.replace("/search?q=", "");
         assert.equal(decodeURIComponent(encodedParam), q);
       });
+    });
+  });
+
+  describe("Query Enhancement & Technical Synonym Expansion", () => {
+    test("filters conversational stop-words from queries", () => {
+      const processed = processSearchQuery("how to use docker in production");
+      assert.ok(!processed.cleanTokens.includes("how"));
+      assert.ok(!processed.cleanTokens.includes("to"));
+      assert.ok(!processed.cleanTokens.includes("in"));
+      assert.ok(processed.cleanTokens.includes("docker"));
+      assert.ok(processed.cleanTokens.includes("production"));
+    });
+
+    test("expands docker query with container and devops synonyms", () => {
+      const processed = processSearchQuery("docker");
+      assert.ok(processed.expandedTerms.includes("docker"));
+      assert.ok(processed.expandedTerms.includes("container"));
+      assert.ok(processed.expandedTerms.includes("devops"));
+      assert.ok(processed.orConditions.some((c) => c.includes("container")));
+    });
+
+    test("expands auth query with clerk and authentication synonyms", () => {
+      const processed = processSearchQuery("auth");
+      assert.ok(processed.expandedTerms.includes("authentication"));
+      assert.ok(processed.expandedTerms.includes("clerk"));
+      assert.ok(processed.expandedTerms.includes("login"));
+    });
+
+    test("handles queries consisting only of stop-words gracefully", () => {
+      const processed = processSearchQuery("how what is");
+      assert.ok(processed.cleanTokens.length > 0);
+      assert.ok(processed.queryPattern.length > 0);
     });
   });
 });

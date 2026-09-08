@@ -89,6 +89,42 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
     ? course.level.charAt(0).toUpperCase() + course.level.slice(1)
     : "Intermediate";
 
+  // Fetch progress if authenticated
+  let progressPercentage = 0;
+  let completedLessonIdsList: string[] = [];
+  try {
+    const { auth } = await import("@clerk/nextjs/server");
+    const authData = await auth();
+    const userId = authData?.userId;
+    
+    if (userId) {
+      const progressDoc = await sanityFetch({
+        query: `*[_type == "progress" && clerkUserId == $userId][0] { completedLessons }`,
+        params: { userId },
+        tags: [`progress-${userId}`],
+        revalidate: 0,
+      }) as any;
+      
+      if (progressDoc && Array.isArray(progressDoc.completedLessons) && course?.modules) {
+        completedLessonIdsList = progressDoc.completedLessons.map((ref: any) => ref._ref).filter(Boolean);
+        const completedLessonIdsSet = new Set(completedLessonIdsList);
+        const courseLessonIds = course.modules.flatMap((m: any) => m.lessons || []).map((l: any) => l._id).filter(Boolean);
+        
+        if (courseLessonIds.length > 0) {
+          let completedInCourse = 0;
+          for (const id of courseLessonIds) {
+            if (completedLessonIdsSet.has(id)) {
+              completedInCourse++;
+            }
+          }
+          progressPercentage = Math.round((completedInCourse / courseLessonIds.length) * 100);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Error fetching progress:", e);
+  }
+
   return (
     <div className="min-h-screen w-full bg-[#FAF9F6] dark:bg-[#090D16] font-sans text-neutral-900 dark:text-neutral-100 selection:bg-primary-100 selection:text-primary-500 transition-colors duration-200">
       {/* Centered Canvas matching 1440px viewport width */}
@@ -104,6 +140,8 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
               course={course || { title: "Next.js for Production", slug: "nextjs-for-production" }}
               currentLessonSlug={slug}
               activeModuleIndex={moduleIndex}
+              progressPercentage={progressPercentage > 0 ? progressPercentage : 0}
+              completedLessonIds={completedLessonIdsList}
             />
 
             {/* Right Lesson Content Area */}
@@ -112,7 +150,7 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
                  BREADCRUMB
                  ────────────────────────────────────────────────────────── */}
               <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
-                <Link href="/" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
+                <Link href="/courses" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
                   All Courses
                 </Link>
                 <ChevronRight className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500 shrink-0" />
@@ -209,7 +247,7 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
               {/* ──────────────────────────────────────────────────────────
                  PREVIOUS / NEXT LESSON FOOTER NAV
                  ────────────────────────────────────────────────────────── */}
-              <LessonFooterNav prevLesson={prevLesson} nextLesson={nextLesson} />
+              <LessonFooterNav prevLesson={prevLesson} nextLesson={nextLesson} courseSlug={course?.slug} />
             </main>
           </div>
         </div>

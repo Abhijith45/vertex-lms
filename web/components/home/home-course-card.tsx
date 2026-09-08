@@ -15,6 +15,7 @@ export interface HomeCourseCardProps {
   modules: number;
   category?: string;
   popular?: boolean;
+  progressPercentage?: number;
 }
 
 export function HomeCourseCard({
@@ -27,6 +28,7 @@ export function HomeCourseCard({
   modules,
   category,
   popular,
+  progressPercentage,
 }: HomeCourseCardProps) {
   function handleClick() {
     posthog.capture("course_card_clicked", {
@@ -85,6 +87,27 @@ export function HomeCourseCard({
             <span>{modules} modules</span>
           </span>
         </div>
+
+        {typeof progressPercentage === "number" && progressPercentage > 0 && (
+          <div className="mt-3.5 pt-3 border-t border-neutral-100 dark:border-neutral-800/80">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="font-medium text-neutral-600 dark:text-neutral-300">
+                {progressPercentage >= 100 ? "Completed" : "In Progress"}
+              </span>
+              <span className="font-semibold text-primary-600 dark:text-primary-400">
+                {progressPercentage}%
+              </span>
+            </div>
+            <div className="h-1.5 w-full bg-neutral-100 dark:bg-neutral-800 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  progressPercentage >= 100 ? "bg-emerald-500" : "bg-[#E05A36]"
+                }`}
+                style={{ width: `${progressPercentage}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </Link>
   );
