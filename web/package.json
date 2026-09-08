@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "lint": "eslint",
-    "test": "node --test test/lesson-utils.test.ts test/video-controls.test.ts test/search-flow.test.ts test/cache.test.ts"
+    "test": "node --test test/lesson-utils.test.ts test/video-controls.test.ts test/search-flow.test.ts test/cache.test.ts test/search-openai.test.ts test/posthog-events.test.ts test/search-thumbnails.test.ts test/two-stage-timestamp.test.ts test/auth-gate.test.ts test/theme.test.ts"
   },
   "dependencies": {
     "@ai-sdk/mcp": "^2.0.43",

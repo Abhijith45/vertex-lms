@@ -4,9 +4,11 @@ import { openai } from "@ai-sdk/openai";
 import { createMCPClient } from "@ai-sdk/mcp";
 import { z } from "zod";
 
+import { auth } from "@clerk/nextjs/server";
+import { getPostHogClient } from "@/lib/posthog-server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { SimpleMemoryCache } from "@/lib/cache";
-import { normalizeSearchQuery } from "@/lib/utils/search";
+import { normalizeSearchQuery, resolveVideoMomentsTwoStage } from "@/lib/utils/search";
 
 export const maxDuration = 60; // Allow enough time for multi-step MCP tool calls
 
@@ -15,6 +17,34 @@ const searchResultCache = new SimpleMemoryCache<{ lessons: any[]; videoMoments: 
   maxEntries: 100,
   defaultTtlMs: 15 * 60 * 1000,
 });
+
+function trackSearchServer(
+  userId: string | null,
+  query: string,
+  results: { lessons: any[]; videoMoments: any[] },
+  isCached: boolean
+) {
+  try {
+    const posthog = getPostHogClient();
+    const totalResults = (results.lessons?.length || 0) + (results.videoMoments?.length || 0);
+    posthog.capture({
+      distinctId: userId || "anonymous",
+      event: "search_performed",
+      properties: {
+        query,
+        query_length: query.length,
+        results_count: totalResults,
+        lessons_count: results.lessons?.length || 0,
+        video_moments_count: results.videoMoments?.length || 0,
+        has_results: totalResults > 0,
+        is_cached: isCached,
+        source: "server_api",
+      },
+    });
+  } catch (err) {
+    console.error("PostHog server search tracking error:", err);
+  }
+}
 
 // Cached initial context singleton (Section 12 of AGENTS.md)
 let cachedInitialContext: any = null;
@@ -73,6 +103,14 @@ export async function GET(req: Request) {
   const rawQuery = searchParams.get("q") || "";
   const query = normalizeSearchQuery(rawQuery);
 
+  let userId: string | null = null;
+  try {
+    const authData = await auth();
+    userId = authData?.userId || null;
+  } catch {
+    // Guest or unauthenticated request
+  }
+
   if (!query) {
     return NextResponse.json({ lessons: [], videoMoments: [] });
   }
@@ -81,6 +119,7 @@ export async function GET(req: Request) {
   const cacheKey = query.toLowerCase();
   const cachedData = searchResultCache.get(cacheKey);
   if (cachedData) {
+    trackSearchServer(userId, query, cachedData, true);
     return NextResponse.json(cachedData, {
       headers: {
         "X-Cache": "HIT",
@@ -90,7 +129,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const [mcpClient, initialContext] = await Promise.all([
+    const [mcpClient, _initialContext] = await Promise.all([
       getMcpClient(),
       getCachedInitialContext(),
     ]);
@@ -98,27 +137,34 @@ export async function GET(req: Request) {
     const allMcpTools = await mcpClient.tools();
 
     const systemPrompt = `
-You are the intelligent search agent for the Vertex Learning platform.
-Your job is to search the Sanity CMS database using the \`groq_query\` tool to find lessons and video moments that match the user's query.
+You are the search agent for Vertex, a production AI learning platform.
+Your sole responsibility is to analyze learner search queries, retrieve matching content from the Sanity dataset using GROQ, and return structured result cards. You are not a conversational chatbot; communicate exclusively through structured tool calls.
 
-IMPORTANT RULES:
-1. First, call \`initial_context\` or \`schema_explorer\` to understand the schema if you need to.
-2. Search is grounded. Say only what the data returns. Never invent a course, lesson, timestamp, or count.
-3. For a query, search BOTH ways and merge: 
-   - Match lessons on their topic (title and notes)
-   - Match video moments (chapters first, then transcript fallback)
-4. Text match is token based, so wildcard your keywords (e.g., \`*query*\`) and OR multiple words.
-5. You cannot text match a Portable Text field directly. Use \`pt::text()\` to search inside Portable Text blocks.
-6. To find a course for a lesson, use a reverse reference: \`*[_type == "course" && references(^._id)][0]\`.
-7. A video document is NOT directly referenced by a lesson. A lesson links to it by URL: \`*[_type == "lesson" && videoUrl == ^.url][0]\`.
+## Role & Search Protocol
+1. Query Analysis: Break the user query into core keywords, synonyms, and concepts.
+2. GROQ Execution: Formulate precise GROQ queries using token wildcards (*term*) and OR (||) logic. Project Portable Text notes to plain text via \`pt::text(notes)\`.
+3. Two-Way Search:
+   - Match lessons on topic (title, \`pt::text(notes)\`, and keyPoints).
+   - Match video moments using Two-Stage Timestamp Resolution:
+     * Stage 1 (Chapters First): Search the chapters array for matching labels (\`chapters[label match "*term*"]\`). If any chapter matches for that video, use its startSeconds and label.
+     * Stage 2 (Transcript Fallback): ONLY if NO chapters match for that video, search the transcript chunks (\`chunks[text match "*term*"]\`) and use the matched chunk's startSeconds and snippet.
+4. Join & Grounding: Every video moment MUST be joined to its parent lesson referencing \`videoUrl\`. Never return a raw video document or ungrounded timestamps.
+5. Final Action: Call the \`return_search_results\` tool with ranked lessons and video moments. Never return conversational markdown or explanatory prose.
 
-When you have gathered all relevant lesson matches and video moment matches via \`groq_query\`, you MUST call the \`return_search_results\` tool with the structured results. DO NOT return conversational text. Just call the tool.
+## Boundaries
+- Grounding: Report ONLY verified data returned by Sanity. Never extrapolate, hallucinate, or fabricate courses, lessons, timestamps, or clip lengths.
+- Internal Video Documents: Video intelligence documents are an internal lookup only. Never return them directly as independent search results.
+- Context Window Safety: Never query or fetch the entire transcript \`chunks\` array. Always filter and slice (\`[0...3]\`) to preserve context limits.
+- Non-conversational: Do not engage in chit-chat, conversational prose, greetings, or markdown responses. Always invoke \`return_search_results\`.
+
+## When No Results Are Found
+- If no lessons or video moments match the query in the database, call \`return_search_results\` with empty arrays (\`{ lessons: [], videoMoments: [] }\`). Never invent fallback content.
 `;
 
     const { toolCalls } = await generateText({
       model: openai("gpt-4o"),
       system: systemPrompt,
-      prompt: `Find content matching this search query: "${query}"`,
+      prompt: `Analyze this user search query and find matching content in Sanity: "${query}"`,
       tools: {
         ...allMcpTools,
         return_search_results: tool({
@@ -151,8 +197,8 @@ When you have gathered all relevant lesson matches and video moment matches via 
         }),
       },
       stopWhen: (options) => {
-        // Stop if max 7 steps or if return_search_results tool was called in latest step
-        if (options.steps.length >= 7) return true;
+        // Stop if max 8 steps or if return_search_results tool was called in latest step
+        if (options.steps.length >= 8) return true;
         const lastStep = options.steps[options.steps.length - 1];
         if (lastStep?.toolCalls.some((tc) => tc.toolName === "return_search_results")) {
           return true;
@@ -176,28 +222,43 @@ When you have gathered all relevant lesson matches and video moment matches via 
       finalResults = { lessons: [], videoMoments: [] };
     }
 
-    searchResultCache.set(cacheKey, finalResults);
-    return NextResponse.json(finalResults, {
-      headers: {
-        "X-Cache": "MISS",
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-      },
-    });
+    // If MCP returned results, cache and return
+    if (finalResults.lessons.length > 0 || finalResults.videoMoments.length > 0) {
+      searchResultCache.set(cacheKey, finalResults);
+      trackSearchServer(userId, query, finalResults, false);
+      return NextResponse.json(finalResults, {
+        headers: {
+          "X-Cache": "MISS",
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      });
+    }
+
+    // Otherwise fall through to Sanity GROQ search for maximum recall
+    throw new Error("No MCP results returned, executing direct Sanity search");
   } catch (error: any) {
-    console.warn("Search LLM/MCP error, falling back to direct Sanity search:", error.message);
+    console.warn("Search LLM/MCP error or fallback triggered:", error.message);
     
     // Direct Sanity GROQ Search Fallback
     try {
       const { serverClient } = await import("@/sanity/lib/client");
-      const cleanWords = query.trim().split(/\s+/).filter(Boolean);
-      const queryPattern = `*${cleanWords.join("*")}*`;
+      const cleanWords = query
+        .replace(/[^a-zA-Z0-9\s]/g, " ")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean);
+      
+      const queryPattern = cleanWords.length > 0 ? `*${cleanWords.join("*")}*` : `*${query}*`;
+      const orConditions = cleanWords.map(w => `*${w}*`).join(" ");
 
-      // 1. Match Lessons
+      // 1. Match Lessons with multi-field OR matching
       const lessonsQuery = `*[_type == "lesson" && (
         title match "${queryPattern}" ||
+        title match "${orConditions}" ||
         pt::text(notes) match "${queryPattern}" ||
+        pt::text(notes) match "${orConditions}" ||
         count(keyPoints[@ match "${queryPattern}"]) > 0
-      )][0...10] {
+      )][0...15] {
         title,
         "slug": slug.current,
         "description": coalesce(pt::text(notes), title),
@@ -209,11 +270,13 @@ When you have gathered all relevant lesson matches and video moment matches via 
       // 2. Match Video Moments (chapters and chunks)
       const videosQuery = `*[_type == "video" && (
         count(chapters[label match "${queryPattern}"]) > 0 ||
-        count(chunks[text match "${queryPattern}"]) > 0
-      )][0...10] {
+        count(chapters[label match "${orConditions}"]) > 0 ||
+        count(chunks[text match "${queryPattern}"]) > 0 ||
+        count(chunks[text match "${orConditions}"]) > 0
+      )][0...15] {
         url,
-        "matchedChapters": chapters[label match "${queryPattern}"][0...3],
-        "matchedChunks": chunks[text match "${queryPattern}"][0...3]
+        "matchedChapters": chapters[label match "${queryPattern}" || label match "${orConditions}"][0...3],
+        "matchedChunks": chunks[text match "${queryPattern}" || text match "${orConditions}"][0...3]
       }`;
 
       const [matchedLessons, matchedVideos] = await Promise.all([
@@ -233,41 +296,29 @@ When you have gathered all relevant lesson matches and video moment matches via 
           }`
         );
 
-        if (!lesson) continue;
+        if (!lesson || !lesson.slug || !lesson.courseTitle) continue;
 
-        if (v.matchedChapters?.length > 0) {
-          for (const ch of v.matchedChapters) {
-            videoMoments.push({
-              lessonTitle: lesson.title || "Lesson Video",
-              lessonSlug: lesson.slug || "",
-              courseTitle: lesson.courseTitle || "Course",
-              description: ch.label,
-              startSeconds: ch.startSeconds || 0,
-              thumbnailUrl: lesson.posterUrl,
-              clipLength: "2-5 mins",
-            });
-          }
-        } else if (v.matchedChunks?.length > 0) {
-          for (const ck of v.matchedChunks) {
-            videoMoments.push({
-              lessonTitle: lesson.title || "Lesson Video",
-              lessonSlug: lesson.slug || "",
-              courseTitle: lesson.courseTitle || "Course",
-              description: ck.text?.slice(0, 120) + "...",
-              startSeconds: ck.startSeconds || 0,
-              thumbnailUrl: lesson.posterUrl,
-              clipLength: "1-2 mins",
-            });
-          }
+        const moments = resolveVideoMomentsTwoStage(v.matchedChapters, v.matchedChunks, 3);
+        for (const m of moments) {
+          videoMoments.push({
+            lessonTitle: lesson.title || "Lesson Video",
+            lessonSlug: lesson.slug,
+            courseTitle: lesson.courseTitle,
+            description: m.description,
+            startSeconds: m.startSeconds,
+            thumbnailUrl: lesson.posterUrl,
+            clipLength: m.clipLength,
+          });
         }
       }
 
       const fallbackResults = {
-        lessons: matchedLessons.filter((l: any) => l.courseTitle),
+        lessons: matchedLessons.filter((l: any) => l.courseTitle && l.slug),
         videoMoments,
       };
 
       searchResultCache.set(cacheKey, fallbackResults);
+      trackSearchServer(userId, query, fallbackResults, false);
       return NextResponse.json(fallbackResults, {
         headers: {
           "X-Cache": "MISS",

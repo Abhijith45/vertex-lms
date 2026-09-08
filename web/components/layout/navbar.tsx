@@ -4,6 +4,7 @@ import { Bell } from "lucide-react";
 import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
 import { VertexLogo } from "@/components/home/vertex-logo";
 import { SearchInput } from "@/components/search/search-input";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 
 interface NavbarProps {
   activePath?: string;
@@ -12,7 +13,7 @@ interface NavbarProps {
 
 export function Navbar({ activePath, showSearch = true }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-neutral-100/90 bg-white/95 px-6 sm:px-12 lg:px-16 backdrop-blur-md">
+    <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-neutral-100/90 dark:border-neutral-800/80 bg-white/95 dark:bg-neutral-900/95 px-6 sm:px-12 lg:px-16 backdrop-blur-md transition-colors duration-200">
       {/* Left: Brand & Navigation */}
       <div className="flex items-center gap-8 sm:gap-10">
         <Link
@@ -21,7 +22,7 @@ export function Navbar({ activePath, showSearch = true }: NavbarProps) {
           aria-label="Vertex Home"
         >
           <VertexLogo className="h-7 w-7" />
-          <span className="text-xl font-bold tracking-tight text-neutral-900 font-sans">
+          <span className="text-xl font-bold tracking-tight text-neutral-900 dark:text-white font-sans">
             Vertex
           </span>
         </Link>
@@ -32,8 +33,8 @@ export function Navbar({ activePath, showSearch = true }: NavbarProps) {
             href="/courses"
             className={`transition-colors ${
               activePath === "/courses"
-                ? "text-neutral-900 font-semibold"
-                : "text-neutral-700 hover:text-neutral-900"
+                ? "text-neutral-900 dark:text-white font-semibold"
+                : "text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
             Courses
@@ -42,8 +43,8 @@ export function Navbar({ activePath, showSearch = true }: NavbarProps) {
             href="/my-learning"
             className={`transition-colors ${
               activePath === "/my-learning"
-                ? "text-neutral-900 font-semibold"
-                : "text-neutral-700 hover:text-neutral-900"
+                ? "text-neutral-900 dark:text-white font-semibold"
+                : "text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white"
             }`}
           >
             My Learning
@@ -58,12 +59,14 @@ export function Navbar({ activePath, showSearch = true }: NavbarProps) {
         </div>
       )}
 
-      {/* Right: Auth Controls */}
-      <div className="flex items-center gap-4 sm:gap-5">
+      {/* Right: Theme Toggle & Auth Controls */}
+      <div className="flex items-center gap-3.5 sm:gap-4">
+        <ThemeToggle />
+
         <Show when="signed-in">
           <button
             type="button"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400 cursor-pointer"
+            className="relative flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 dark:text-neutral-300 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400 cursor-pointer"
             aria-label="View notifications"
           >
             <Bell className="h-5 w-5" strokeWidth={1.75} />
@@ -81,7 +84,7 @@ export function Navbar({ activePath, showSearch = true }: NavbarProps) {
           <SignInButton>
             <button
               type="button"
-              className="text-sm font-medium text-neutral-700 transition-colors hover:text-neutral-900 cursor-pointer"
+              className="text-sm font-medium text-neutral-700 dark:text-neutral-300 transition-colors hover:text-neutral-900 dark:hover:text-white cursor-pointer"
             >
               Sign in
             </button>
@@ -89,7 +92,7 @@ export function Navbar({ activePath, showSearch = true }: NavbarProps) {
           <SignUpButton>
             <button
               type="button"
-              className="inline-flex items-center rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700 cursor-pointer"
+              className="inline-flex items-center rounded-lg bg-neutral-900 dark:bg-white px-4 py-2 text-sm font-medium text-white dark:text-neutral-900 transition-colors hover:bg-neutral-700 dark:hover:bg-neutral-200 cursor-pointer"
             >
               Get started
             </button>

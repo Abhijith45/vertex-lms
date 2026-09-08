@@ -152,8 +152,8 @@ export function WhatYoullLearn({ outcomes }: WhatYoullLearnProps) {
   const list = outcomes && outcomes.length > 0 ? outcomes : defaultOutcomes;
 
   return (
-    <section className="mb-14 rounded-2xl sm:rounded-3xl border border-neutral-200/80 bg-white/70 backdrop-blur-xs p-6 sm:p-8 lg:p-10 shadow-2xs">
-      <h2 className="font-display text-2xl sm:text-[28px] font-bold text-neutral-900 tracking-tight mb-7">
+    <section className="mb-14 rounded-2xl sm:rounded-3xl border border-neutral-200/80 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/60 backdrop-blur-xs p-6 sm:p-8 lg:p-10 shadow-2xs transition-colors duration-200">
+      <h2 className="font-display text-2xl sm:text-[28px] font-bold text-neutral-900 dark:text-neutral-50 tracking-tight mb-7">
         What you&apos;ll learn
       </h2>
 
@@ -161,14 +161,14 @@ export function WhatYoullLearn({ outcomes }: WhatYoullLearnProps) {
         {list.map((outcome, idx) => (
           <div
             key={outcome._key || idx}
-            className="rounded-xl border border-neutral-200/70 bg-white p-6 flex items-start gap-5 shadow-2xs hover:border-neutral-300 hover:shadow-xs transition-all duration-150"
+            className="rounded-xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 p-6 flex items-start gap-5 shadow-2xs hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-xs transition-all duration-150"
           >
             <OutcomeIcon iconType={outcome.icon} index={idx} />
             <div>
-              <h3 className="font-sans font-semibold text-neutral-900 text-base mb-1.5 leading-snug">
+              <h3 className="font-sans font-semibold text-neutral-900 dark:text-neutral-100 text-base mb-1.5 leading-snug">
                 {outcome.title}
               </h3>
-              <p className="text-neutral-500 text-sm leading-relaxed">
+              <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed">
                 {outcome.description}
               </p>
             </div>

@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useId } from "react";
 import { useRouter } from "next/navigation";
+import { useUser, SignInButton, SignUpButton } from "@clerk/nextjs";
 import {
   Play,
   Pause,
@@ -15,6 +16,7 @@ import {
   Subtitles,
   Settings,
   Check,
+  Lock,
 } from "lucide-react";
 import {
   parseVideoUrl,
@@ -22,12 +24,18 @@ import {
   getNextPlaybackRate,
   clampSeekTime,
 } from "@/lib/utils/video";
+import posthog from "posthog-js";
+
+import { AuthPromptModal } from "./auth-prompt-modal";
 
 interface VideoEmbedProps {
   videoUrl?: string;
   title: string;
   startSeconds?: number;
   nextLessonSlug?: string;
+  lessonSlug?: string;
+  courseSlug?: string;
+  freePreview?: boolean;
 }
 
 declare global {
@@ -52,10 +60,35 @@ export function VideoEmbed({
   title,
   startSeconds = 0,
   nextLessonSlug,
+  lessonSlug,
+  courseSlug,
+  freePreview = false,
 }: VideoEmbedProps) {
   const router = useRouter();
+  const { isSignedIn, isLoaded: isAuthLoaded } = useUser();
   const rawId = useId();
   const playerId = `yt-player-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+
+  // Auth gate state: show auth modal when unauthenticated user attempts play
+  const [showLoginOverlay, setShowLoginOverlay] = useState(false);
+  const requiresAuth = isAuthLoaded ? !isSignedIn : true;
+
+  const hasStartedPlayingRef = useRef(false);
+  const milestonesReachedRef = useRef<Set<number>>(new Set());
+  const resumeTrackedRef = useRef(false);
+  const hasCompletedRef = useRef(false);
+
+  const lessonSlugRef = useRef(lessonSlug);
+  const courseSlugRef = useRef(courseSlug);
+  const titleRef = useRef(title);
+  const videoUrlRef = useRef(videoUrl);
+
+  useEffect(() => {
+    lessonSlugRef.current = lessonSlug;
+    courseSlugRef.current = courseSlug;
+    titleRef.current = title;
+    videoUrlRef.current = videoUrl;
+  }, [lessonSlug, courseSlug, title, videoUrl]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
@@ -149,17 +182,79 @@ export function VideoEmbed({
             if (d && d > 0) setDuration(d);
             if (startSeconds > 0) {
               event.target.seekTo(startSeconds, true);
+              event.target.pauseVideo?.();
               setCurrentTime(startSeconds);
+              setIsPlaying(false);
             }
           },
           onStateChange: (event: any) => {
             // 1: PLAYING, 2: PAUSED, 0: ENDED, 3: BUFFERING
             if (event.data === 1) {
               setIsPlaying(true);
+              const isInitial = !hasStartedPlayingRef.current;
+              hasStartedPlayingRef.current = true;
+
+              // Track resume used if starting from a positive startSeconds
+              if (startSeconds > 0 && !resumeTrackedRef.current) {
+                resumeTrackedRef.current = true;
+                posthog.capture("resume_used", {
+                  lesson_slug: lessonSlugRef.current || "",
+                  lesson_title: titleRef.current,
+                  course_slug: courseSlugRef.current || "",
+                  start_seconds: startSeconds,
+                  source: "video_player",
+                });
+              }
+
+              posthog.capture("video_played", {
+                lesson_slug: lessonSlugRef.current || "",
+                lesson_title: titleRef.current,
+                course_slug: courseSlugRef.current || "",
+                video_url: videoUrlRef.current || "",
+                current_time: Math.floor(playerInstanceRef.current?.getCurrentTime() || currentTime),
+                duration: Math.floor(duration || playerInstanceRef.current?.getDuration() || 0),
+                start_seconds: startSeconds,
+                is_initial_play: isInitial,
+              });
             } else if (event.data === 2) {
               setIsPlaying(false);
+              const curr = playerInstanceRef.current?.getCurrentTime() || currentTime;
+              const dur = duration || playerInstanceRef.current?.getDuration() || 0;
+              posthog.capture("video_paused", {
+                lesson_slug: lessonSlugRef.current || "",
+                lesson_title: titleRef.current,
+                course_slug: courseSlugRef.current || "",
+                current_time: Math.floor(curr),
+                duration: Math.floor(dur),
+                percent_complete: dur > 0 ? Math.round((curr / dur) * 100) : 0,
+              });
             } else if (event.data === 0) {
               setIsPlaying(false);
+              const dur = duration || playerInstanceRef.current?.getDuration() || 0;
+              if (!hasCompletedRef.current) {
+                hasCompletedRef.current = true;
+                posthog.capture("lesson_completed", {
+                  lesson_slug: lessonSlugRef.current || "",
+                  lesson_title: titleRef.current,
+                  course_slug: courseSlugRef.current || "",
+                  duration: Math.floor(dur),
+                  source: "video_ended",
+                });
+
+                if (lessonSlugRef.current) {
+                  fetch("/api/progress", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      lessonSlug: lessonSlugRef.current,
+                      courseSlug: courseSlugRef.current,
+                      positionSeconds: Math.floor(dur),
+                      completed: true,
+                    }),
+                  }).catch(() => {});
+                }
+              }
+
               // Read from ref so autoplay state toggle never triggers player re-init
               if (autoplayNextRef.current && nextLessonSlugRef.current) {
                 router.push(`/lessons/${nextLessonSlugRef.current}`);
@@ -182,6 +277,22 @@ export function VideoEmbed({
     };
   }, [apiReady, parsed?.id, playerId, startSeconds, router]);
 
+  // Dynamic seek update when startSeconds prop changes or player is mounted
+  useEffect(() => {
+    if (startSeconds > 0) {
+      setCurrentTime(startSeconds);
+      if (playerInstanceRef.current && typeof playerInstanceRef.current.seekTo === "function") {
+        try {
+          playerInstanceRef.current.seekTo(startSeconds, true);
+          if (!isPlayingRef.current) {
+            playerInstanceRef.current.pauseVideo?.();
+            setIsPlaying(false);
+          }
+        } catch {}
+      }
+    }
+  }, [startSeconds]);
+
   // ──────────────────────────────────────────────────────────
   // 2. Continuous 200ms Time & Scrubber Sync Polling
   // ──────────────────────────────────────────────────────────
@@ -199,6 +310,49 @@ export function VideoEmbed({
               setDuration(dur);
             } else if (typeof dur === "number" && dur > 0 && duration === 0) {
               setDuration(dur);
+            }
+
+            // Track watch depth milestones: 25%, 50%, 75%, 90%, 100%
+            if (typeof dur === "number" && dur > 0 && typeof curr === "number" && !isNaN(curr)) {
+              const percent = Math.floor((curr / dur) * 100);
+              const milestones = [25, 50, 75, 90, 100];
+              for (const m of milestones) {
+                if (percent >= m && !milestonesReachedRef.current.has(m)) {
+                  milestonesReachedRef.current.add(m);
+                  posthog.capture("video_watch_depth", {
+                    lesson_slug: lessonSlugRef.current || "",
+                    lesson_title: titleRef.current,
+                    course_slug: courseSlugRef.current || "",
+                    percent: m,
+                    seconds: Math.floor(curr),
+                    duration: Math.floor(dur),
+                  });
+
+                  if (m === 100 && !hasCompletedRef.current) {
+                    hasCompletedRef.current = true;
+                    posthog.capture("lesson_completed", {
+                      lesson_slug: lessonSlugRef.current || "",
+                      lesson_title: titleRef.current,
+                      course_slug: courseSlugRef.current || "",
+                      duration: Math.floor(dur),
+                      source: "video_ended",
+                    });
+                  }
+
+                  if (lessonSlugRef.current && (m === 25 || m === 50 || m === 75 || m === 90 || m === 100)) {
+                    fetch("/api/progress", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        lessonSlug: lessonSlugRef.current,
+                        courseSlug: courseSlugRef.current,
+                        positionSeconds: Math.floor(curr),
+                        completed: m === 100,
+                      }),
+                    }).catch(() => {});
+                  }
+                }
+              }
             }
           } catch {}
         }
@@ -290,6 +444,11 @@ export function VideoEmbed({
   // 4. Player Control Actions
   // ──────────────────────────────────────────────────────────
   const togglePlay = () => {
+    // Gate: if auth is required and user is not signed in, show login overlay
+    if (requiresAuth && !isPlaying) {
+      setShowLoginOverlay(true);
+      return;
+    }
     if (!playerInstanceRef.current) return;
     try {
       if (isPlaying) {
@@ -465,49 +624,64 @@ export function VideoEmbed({
       className="relative aspect-video w-full overflow-hidden rounded-2xl md:rounded-3xl bg-black shadow-xl shadow-black/35 border border-neutral-900 group select-none cursor-default"
     >
       {/* ──────────────────────────────────────────────────────────
-         YOUTUBE EMBED CONTAINER
+         STARTING TIMESTAMP INDICATOR
          ────────────────────────────────────────────────────────── */}
-      <div className="absolute inset-0 h-full w-full pointer-events-none">
-        <div id={playerId} className="h-full w-full object-cover" />
-      </div>
-
-      {/* ──────────────────────────────────────────────────────────
-         CLICK TO TOGGLE PLAY OVERLAY
-         ────────────────────────────────────────────────────────── */}
-      <div
-        onClick={togglePlay}
-        className="absolute inset-0 z-10 cursor-pointer"
-        aria-label={isPlaying ? "Pause video" : "Play video"}
-      />
-
-      {/* ──────────────────────────────────────────────────────────
-         CENTER PLAY BUTTON (Only visible when paused/idle)
-         ────────────────────────────────────────────────────────── */}
-      {!isPlaying && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              togglePlay();
-            }}
-            className="pointer-events-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-neutral-900/85 hover:bg-neutral-900 border border-neutral-700/60 text-white shadow-2xl transition-all duration-200 hover:scale-108 cursor-pointer group/center"
-            aria-label="Play video"
-          >
-            <Play className="h-7 w-7 sm:h-9 sm:w-9 fill-white text-white translate-x-0.5 transition-transform group-hover/center:scale-105" />
-          </button>
+      {startSeconds > 0 && (
+        <div className="absolute top-4 left-4 z-40 flex items-center gap-1.5 rounded-full bg-neutral-900/90 border border-neutral-700/80 px-3 py-1 text-xs font-medium text-white shadow-lg backdrop-blur-xs pointer-events-none">
+          <span className="h-1.5 w-1.5 rounded-full bg-[#E05A36] animate-pulse" />
+          <span>Starting at {formatVideoTime(startSeconds)}</span>
         </div>
       )}
 
       {/* ──────────────────────────────────────────────────────────
-         CUSTOM NATIVE CONTROLS OVERLAY
+         AUTH PROMPT MODAL (shown when unauthenticated user attempts play)
          ────────────────────────────────────────────────────────── */}
-      <div
-        className={`absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/95 via-black/75 to-transparent pt-10 pb-3.5 px-4 sm:px-6 transition-opacity duration-300 pointer-events-auto ${
-          showControls || !isPlaying || isSettingsOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
+      <AuthPromptModal
+        isOpen={showLoginOverlay && requiresAuth}
+        onClose={() => setShowLoginOverlay(false)}
+        lessonTitle={title}
+      />
+
+      {/* ──────────────────────────────────────────────────────────
+         PROVIDER EMBED CONTAINER (YouTube / Vimeo / Bunny)
+         ────────────────────────────────────────────────────────── */}
+      {parsed.provider === "youtube" ? (
+        <>
+          <div className="absolute inset-0 h-full w-full pointer-events-none">
+            <div id={playerId} className="h-full w-full object-cover" />
+          </div>
+
+          {/* CLICK TO TOGGLE PLAY OVERLAY */}
+          <div
+            onClick={togglePlay}
+            className="absolute inset-0 z-10 cursor-pointer"
+            aria-label={isPlaying ? "Pause video" : "Play video"}
+          />
+
+          {/* CENTER PLAY BUTTON (Only visible when paused/idle) */}
+          {!isPlaying && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  togglePlay();
+                }}
+                className="pointer-events-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-neutral-900/85 hover:bg-neutral-900 border border-neutral-700/60 text-white shadow-2xl transition-all duration-200 hover:scale-108 cursor-pointer group/center"
+                aria-label="Play video"
+              >
+                <Play className="h-7 w-7 sm:h-9 sm:w-9 fill-white text-white translate-x-0.5 transition-transform group-hover/center:scale-105" />
+              </button>
+            </div>
+          )}
+
+          {/* CUSTOM NATIVE CONTROLS OVERLAY */}
+          <div
+            className={`absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/95 via-black/75 to-transparent pt-10 pb-3.5 px-4 sm:px-6 transition-opacity duration-300 pointer-events-auto ${
+              showControls || !isPlaying || isSettingsOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
         {/* ── Progress Scrubber Bar ── */}
         <div
           ref={progressBarRef}
@@ -762,6 +936,30 @@ export function VideoEmbed({
           </div>
         </div>
       </div>
+    </>
+  ) : (
+    <div className="absolute inset-0 h-full w-full">
+      {requiresAuth && (
+        <div
+          onClick={() => setShowLoginOverlay(true)}
+          className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-xs cursor-pointer group"
+          aria-label="Play video"
+        >
+          <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-neutral-900/85 group-hover:bg-neutral-900 border border-neutral-700/60 text-white shadow-2xl transition-all duration-200 group-hover:scale-108">
+            <Play className="h-7 w-7 sm:h-9 sm:w-9 fill-white text-white translate-x-0.5" />
+          </div>
+        </div>
+      )}
+      <iframe
+        src={parsed.embedUrl}
+        title={title}
+        className="h-full w-full border-0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+      />
     </div>
+  )}
+</div>
   );
 }
+

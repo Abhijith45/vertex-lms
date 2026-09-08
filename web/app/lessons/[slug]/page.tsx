@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ChevronRight, Clock, BarChart2, Users } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { VideoEmbed } from "@/components/lesson/video-embed";
+import { LessonViewTracker } from "@/components/lesson/lesson-view-tracker";
 import { LessonSidebar } from "@/components/lesson/lesson-sidebar";
 import { LessonContentTabs } from "@/components/lesson/lesson-content-tabs";
 import { LessonFooterNav } from "@/components/lesson/lesson-footer-nav";
@@ -29,7 +30,9 @@ export async function generateMetadata({ params }: LessonPageProps) {
 export default async function LessonPage({ params, searchParams }: LessonPageProps) {
   const { slug } = await params;
   const search = searchParams ? await searchParams : undefined;
-  const startSeconds = search?.start ? parseInt(search.start, 10) : 0;
+  const rawStart = search?.start ? parseInt(search.start, 10) : 0;
+  // Validate: must be a non-negative integer; clamp to 0 if invalid
+  const startSeconds = Number.isFinite(rawStart) && rawStart > 0 ? Math.floor(rawStart) : 0;
 
   // Fetch lesson data and reverse-referenced parent course with ISR caching
   let lesson: any = null;
@@ -86,9 +89,9 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
     : "Intermediate";
 
   return (
-    <div className="min-h-screen w-full bg-[#FAF9F6] font-sans text-neutral-900 selection:bg-primary-100 selection:text-primary-500">
+    <div className="min-h-screen w-full bg-[#FAF9F6] dark:bg-[#090D16] font-sans text-neutral-900 dark:text-neutral-100 selection:bg-primary-100 selection:text-primary-500 transition-colors duration-200">
       {/* Centered Canvas matching 1440px viewport width */}
-      <div className="mx-auto min-h-screen max-w-[1440px] bg-white shadow-xs flex flex-col justify-between">
+      <div className="mx-auto min-h-screen max-w-[1440px] bg-white dark:bg-[#0F172A] border-x border-neutral-200/50 dark:border-neutral-800/80 shadow-xs flex flex-col justify-between transition-colors duration-200">
         <div>
           {/* Top Navbar */}
           <Navbar activePath="/courses" />
@@ -107,27 +110,27 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
               {/* ──────────────────────────────────────────────────────────
                  BREADCRUMB
                  ────────────────────────────────────────────────────────── */}
-              <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-neutral-500">
-                <Link href="/" className="hover:text-neutral-900 transition-colors">
+              <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
+                <Link href="/" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
                   All Courses
                 </Link>
-                <ChevronRight className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                <ChevronRight className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500 shrink-0" />
                 <Link
                   href={`/courses/${course?.slug || "nextjs-for-production"}`}
-                  className="hover:text-neutral-900 transition-colors truncate max-w-[160px] sm:max-w-none"
+                  className="hover:text-neutral-900 dark:hover:text-white transition-colors truncate max-w-[160px] sm:max-w-none"
                 >
                   {course?.title || "Next.js for Production"}
                 </Link>
                 {currentModule && (
                   <>
-                    <ChevronRight className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
+                    <ChevronRight className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500 shrink-0" />
                     <span className="truncate max-w-[160px] sm:max-w-none">
                       {currentModule.title}
                     </span>
                   </>
                 )}
-                <ChevronRight className="h-3.5 w-3.5 text-neutral-400 shrink-0" />
-                <span className="text-neutral-800 font-medium truncate" aria-current="page">
+                <ChevronRight className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500 shrink-0" />
+                <span className="text-neutral-800 dark:text-neutral-200 font-medium truncate" aria-current="page">
                   {lesson.title}
                 </span>
               </nav>
@@ -137,33 +140,33 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
                  ────────────────────────────────────────────────────────── */}
               <div className="mb-6">
                 <div className="flex items-center justify-between gap-4 mb-3">
-                  <div className="inline-flex items-center rounded-md border border-[#FED7AA] bg-[#FFF5EE] px-2.5 py-0.5 text-[11px] font-bold tracking-wider text-[#EA580C] uppercase select-none">
+                  <div className="inline-flex items-center rounded-md border border-[#FED7AA] dark:border-primary-500/30 bg-[#FFF5EE] dark:bg-primary-500/10 px-2.5 py-0.5 text-[11px] font-bold tracking-wider text-[#EA580C] dark:text-primary-400 uppercase select-none">
                     {lessonLabel}
                   </div>
                   <BookmarkButton courseId={lesson._id} />
                 </div>
 
-                <h1 className="font-display text-3xl sm:text-4xl lg:text-[42px] font-bold text-neutral-900 tracking-tight leading-tight mb-3">
+                <h1 className="font-display text-3xl sm:text-4xl lg:text-[42px] font-bold text-neutral-900 dark:text-neutral-50 tracking-tight leading-tight mb-3">
                   {lesson.title}
                 </h1>
 
                 {/* Subtitle / intro text */}
-                <p className="text-neutral-600 text-base sm:text-lg leading-relaxed max-w-3xl mb-5">
+                <p className="text-neutral-600 dark:text-neutral-300 text-base sm:text-lg leading-relaxed max-w-3xl mb-5">
                   Learn how Next.js handles data fetching and caching in both Server and Client Components.
                 </p>
 
                 {/* Metadata Row */}
-                <div className="flex flex-wrap items-center gap-5 text-sm text-neutral-500 font-medium">
+                <div className="flex flex-wrap items-center gap-5 text-sm text-neutral-500 dark:text-neutral-400 font-medium">
                   <div className="flex items-center gap-1.5">
-                    <Clock className="h-4 w-4 text-neutral-400" />
+                    <Clock className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
                     <span>{durationFormatted}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <BarChart2 className="h-4 w-4 text-neutral-400" />
+                    <BarChart2 className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
                     <span>{levelDisplay}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Users className="h-4 w-4 text-neutral-400" />
+                    <Users className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
                     <span>{studentCountDisplay}</span>
                   </div>
                 </div>
@@ -172,12 +175,22 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
               {/* ──────────────────────────────────────────────────────────
                  VIDEO PLAYER EMBED
                  ────────────────────────────────────────────────────────── */}
+              <LessonViewTracker
+                lessonSlug={slug}
+                lessonTitle={lesson.title}
+                courseSlug={course?.slug}
+                duration={lesson.duration}
+                startSeconds={startSeconds}
+              />
               <div className="mb-8">
                 <VideoEmbed
                   videoUrl={lesson.videoUrl}
                   title={lesson.title}
                   startSeconds={startSeconds}
                   nextLessonSlug={nextLesson?.lesson.slug}
+                  lessonSlug={slug}
+                  courseSlug={course?.slug}
+                  freePreview={Boolean(lesson.freePreview)}
                 />
               </div>
 
@@ -189,6 +202,7 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
                 keyPoints={lesson.keyPoints}
                 proTip={lesson.proTip}
                 resources={lesson.resources}
+                lessonSlug={slug}
               />
 
               {/* ──────────────────────────────────────────────────────────

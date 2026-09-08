@@ -87,9 +87,9 @@ export default async function HomePage() {
       : fallbackCourses;
 
   return (
-    <div className="min-h-screen w-full bg-[#FAF9F6] font-sans text-neutral-900 selection:bg-primary-100 selection:text-primary-500">
+    <div className="min-h-screen w-full bg-[#FAF9F6] dark:bg-[#090D16] font-sans text-neutral-900 dark:text-neutral-100 selection:bg-primary-100 selection:text-primary-500 transition-colors duration-200">
       {/* Centered White Canvas with 1440px viewport width */}
-      <div className="mx-auto min-h-screen max-w-[1440px] bg-white shadow-xs flex flex-col justify-between">
+      <div className="mx-auto min-h-screen max-w-[1440px] bg-white dark:bg-[#0F172A] border-x border-neutral-200/50 dark:border-neutral-800/80 shadow-xs flex flex-col justify-between transition-colors duration-200">
         <div>
           {/* Top Header / Navigation (Search input removed on home page) */}
           <Navbar activePath="/" showSearch={false} />
@@ -99,18 +99,18 @@ export default async function HomePage() {
              ────────────────────────────────────────────────────────── */}
           <section className="px-6 pt-16 pb-14 text-center sm:px-12 lg:px-16 md:pt-20 md:pb-16">
             {/* Intelligent Learning Pill */}
-            <div className="inline-flex items-center rounded-full border border-[#FED7AA] bg-[#FFF5EE] px-4 py-1.5 text-[11px] font-bold tracking-widest text-[#EA580C] uppercase shadow-2xs mb-7 select-none">
+            <div className="inline-flex items-center rounded-full border border-[#FED7AA] dark:border-primary-500/30 bg-[#FFF5EE] dark:bg-primary-500/10 px-4 py-1.5 text-[11px] font-bold tracking-widest text-[#EA580C] dark:text-primary-400 uppercase shadow-2xs mb-7 select-none">
               INTELLIGENT LEARNING
             </div>
 
             {/* Headline */}
-            <h1 className="font-display text-4xl font-bold tracking-tight text-neutral-900 sm:text-5xl md:text-[62px] leading-[1.14] max-w-4xl mx-auto">
+            <h1 className="font-display text-4xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 sm:text-5xl md:text-[62px] leading-[1.14] max-w-4xl mx-auto">
               Search your learning <br className="hidden sm:inline" />
               in plain English.
             </h1>
 
             {/* Subtitle */}
-            <p className="mt-5 text-base sm:text-lg text-neutral-500 max-w-xl mx-auto leading-relaxed">
+            <p className="mt-5 text-base sm:text-lg text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto leading-relaxed">
               Vertex understands what you want to learn and finds the exact
               lessons across all your courses.
             </p>
@@ -130,12 +130,12 @@ export default async function HomePage() {
           <section className="px-6 py-8 sm:px-12 lg:px-16">
             {/* Section Title & Link */}
             <div className="flex items-center justify-between mb-7">
-              <h2 className="font-display text-2xl sm:text-[28px] font-bold text-neutral-900 tracking-tight">
+              <h2 className="font-display text-2xl sm:text-[28px] font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">
                 All Courses
               </h2>
               <Link
                 href="/courses"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-500 transition-colors hover:text-[#EA580C] group"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-500 hover:text-[#EA580C] dark:text-primary-400 dark:hover:text-primary-300 transition-colors group"
               >
                 <span>View all courses</span>
                 <ArrowRight
@@ -168,9 +168,9 @@ export default async function HomePage() {
                ────────────────────────────────────────────────────────── */}
             <div className="relative my-16 flex items-center justify-center">
               <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                <div className="w-full border-t border-neutral-200/80" />
+                <div className="w-full border-t border-neutral-200/80 dark:border-neutral-800" />
               </div>
-              <div className="relative flex items-center gap-2 bg-white px-5 text-sm text-neutral-600 font-normal">
+              <div className="relative flex items-center gap-2 bg-white dark:bg-[#0F172A] px-5 text-sm text-neutral-600 dark:text-neutral-400 font-normal transition-colors">
                 <Star
                   className="h-4 w-4 text-primary-500 fill-transparent"
                   strokeWidth={1.75}

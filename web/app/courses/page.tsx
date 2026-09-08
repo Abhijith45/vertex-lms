@@ -68,9 +68,9 @@ export default async function AllCoursesPage() {
   }));
 
   return (
-    <div className="min-h-screen w-full bg-[#FAF9F6] font-sans text-neutral-900 selection:bg-primary-100 selection:text-primary-500">
+    <div className="min-h-screen w-full bg-[#FAF9F6] dark:bg-[#090D16] font-sans text-neutral-900 dark:text-neutral-100 selection:bg-primary-100 selection:text-primary-500 transition-colors duration-200">
       {/* Centered White Canvas with 1440px viewport width */}
-      <div className="mx-auto min-h-screen max-w-[1440px] bg-white shadow-xs flex flex-col justify-between">
+      <div className="mx-auto min-h-screen max-w-[1440px] bg-white dark:bg-[#0F172A] border-x border-neutral-200/50 dark:border-neutral-800/80 shadow-xs flex flex-col justify-between transition-colors duration-200">
         <div>
           {/* Top Header / Navigation */}
           <Navbar activePath="/courses" />
@@ -78,25 +78,25 @@ export default async function AllCoursesPage() {
           {/* Main Content Area */}
           <main className="px-6 sm:px-12 lg:px-16 pt-8 pb-24">
             {/* Breadcrumb */}
-            <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-2 text-sm text-neutral-500">
+            <nav aria-label="Breadcrumb" className="mb-6 flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
               <Link
                 href="/"
-                className="transition-colors hover:text-neutral-900 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400 rounded-sm"
+                className="transition-colors hover:text-neutral-900 dark:hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400 rounded-sm"
               >
                 Home
               </Link>
-              <ChevronRight className="h-4 w-4 text-neutral-400" />
-              <span className="text-neutral-800 font-medium" aria-current="page">
+              <ChevronRight className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+              <span className="text-neutral-800 dark:text-neutral-200 font-medium" aria-current="page">
                 Courses
               </span>
             </nav>
 
             {/* Page Title & Intro */}
             <div className="mb-10 max-w-3xl">
-              <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 mb-4">
+              <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50 mb-4">
                 All Courses
               </h1>
-              <p className="text-base sm:text-lg text-neutral-500 leading-relaxed">
+              <p className="text-base sm:text-lg text-neutral-500 dark:text-neutral-400 leading-relaxed">
                 Explore in-depth engineering courses covering modern frontend architecture, AI systems, backend infrastructure, and security.
               </p>
             </div>

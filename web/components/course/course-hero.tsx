@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import {
@@ -8,6 +10,7 @@ import {
   ArrowRight,
   BarChart2,
 } from "lucide-react";
+import posthog from "posthog-js";
 import { CourseCoverArt } from "./course-cover-art";
 import { BookmarkButton } from "./bookmark-button";
 
@@ -58,15 +61,15 @@ export function CourseHero({
       {/* ──────────────────────────────────────────────────────────
          BREADCRUMB
          ────────────────────────────────────────────────────────── */}
-      <nav aria-label="Breadcrumb" className="mb-8 flex items-center gap-2 text-sm text-neutral-500">
+      <nav aria-label="Breadcrumb" className="mb-8 flex items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
         <Link
           href="/"
-          className="transition-colors hover:text-neutral-900 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400 rounded-sm"
+          className="transition-colors hover:text-neutral-900 dark:hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400 rounded-sm"
         >
           All Courses
         </Link>
-        <ChevronRight className="h-4 w-4 text-neutral-400" />
-        <span className="text-neutral-800 font-medium" aria-current="page">
+        <ChevronRight className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
+        <span className="text-neutral-800 dark:text-neutral-200 font-medium" aria-current="page">
           {course.title}
         </span>
       </nav>
@@ -86,45 +89,45 @@ export function CourseHero({
         <div className="flex-1">
           {/* Popular Badge */}
           {course.popular && (
-            <div className="mb-4 inline-flex items-center rounded-md border border-[#FED7AA] bg-[#FFF5EE] px-3 py-1 text-[11px] font-bold tracking-wider text-[#EA580C] uppercase select-none">
+            <div className="mb-4 inline-flex items-center rounded-md border border-[#FED7AA] dark:border-primary-500/30 bg-[#FFF5EE] dark:bg-primary-500/10 px-3 py-1 text-[11px] font-bold tracking-wider text-[#EA580C] dark:text-primary-400 uppercase select-none">
               POPULAR
             </div>
           )}
 
           {/* Course Headline */}
-          <h1 className="font-display text-4xl sm:text-5xl lg:text-[54px] font-bold text-neutral-900 tracking-tight leading-[1.12] mb-4">
+          <h1 className="font-display text-4xl sm:text-5xl lg:text-[54px] font-bold text-neutral-900 dark:text-neutral-50 tracking-tight leading-[1.12] mb-4">
             {course.title}
           </h1>
 
           {/* Summary / Subtitle */}
-          <p className="text-neutral-600 text-base sm:text-lg leading-relaxed max-w-2xl mb-8">
+          <p className="text-neutral-600 dark:text-neutral-300 text-base sm:text-lg leading-relaxed max-w-2xl mb-8">
             {course.summary ||
               "Build scalable, high-performance web applications with Next.js, best practices, and production-ready deployment strategies."}
           </p>
 
           {/* Metadata Row */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-neutral-600 font-medium mb-9">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-neutral-600 dark:text-neutral-400 font-medium mb-9">
             {/* Level */}
             <div className="flex items-center gap-2">
-              <BarChart2 className="h-4 w-4 text-neutral-400" strokeWidth={1.75} />
+              <BarChart2 className="h-4 w-4 text-neutral-400 dark:text-neutral-500" strokeWidth={1.75} />
               <span>{levelDisplay}</span>
             </div>
 
             {/* Total Duration */}
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-neutral-400" strokeWidth={1.75} />
+              <Clock className="h-4 w-4 text-neutral-400 dark:text-neutral-500" strokeWidth={1.75} />
               <span>{totalDurationFormatted}</span>
             </div>
 
             {/* Module Count */}
             <div className="flex items-center gap-2">
-              <BookOpen className="h-4 w-4 text-neutral-400" strokeWidth={1.75} />
+              <BookOpen className="h-4 w-4 text-neutral-400 dark:text-neutral-500" strokeWidth={1.75} />
               <span>{totalModulesCount} modules</span>
             </div>
 
             {/* Student Count */}
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-neutral-400" strokeWidth={1.75} />
+              <Users className="h-4 w-4 text-neutral-400 dark:text-neutral-500" strokeWidth={1.75} />
               <span>{studentDisplay}</span>
             </div>
           </div>
@@ -133,6 +136,14 @@ export function CourseHero({
           <div className="flex flex-wrap items-center gap-4">
             <Link
               href={continueLearningUrl}
+              onClick={() => {
+                posthog.capture("resume_used", {
+                  course_slug: course.slug,
+                  course_title: course.title,
+                  continue_url: continueLearningUrl,
+                  source: "course_hero",
+                });
+              }}
               className="inline-flex items-center gap-2 rounded-xl bg-[#E05A36] px-6 py-3.5 text-sm sm:text-base font-medium text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:bg-[#C2410C] hover:shadow-lg active:scale-[0.99] cursor-pointer"
             >
               <span>Continue Learning</span>
