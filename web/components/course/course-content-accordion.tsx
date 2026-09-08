@@ -145,7 +145,7 @@ export function CourseContentAccordion({
                     return (
                       <div
                         key={lesson._id || lIdx}
-                        className="py-3 flex items-center justify-between gap-3 text-sm"
+                        className="py-2.5 px-2 -mx-2 rounded-lg transition-colors hover:bg-neutral-100/70 dark:hover:bg-neutral-800/60 flex items-center justify-between gap-3 text-sm"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           {isCompleted ? (

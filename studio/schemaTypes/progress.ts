@@ -37,6 +37,17 @@ export const progress = defineType({
         }),
       ],
     }),
+    defineField({
+      name: 'bookmarkedCourses',
+      title: 'Bookmarked Courses',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'reference',
+          to: [{ type: 'course' }],
+        }),
+      ],
+    }),
   ],
   preview: {
     select: {

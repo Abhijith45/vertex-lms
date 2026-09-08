@@ -1,11 +1,12 @@
 import React from "react";
-import { BookOpen, CheckCircle2, Clock } from "lucide-react";
+import { BookOpen, CheckCircle2, Clock, Bookmark } from "lucide-react";
 
 interface MyLearningHeroProps {
   userName?: string | null;
   activeCoursesCount: number;
   completedLessonsCount: number;
   completedCoursesCount: number;
+  savedCoursesCount?: number;
 }
 
 export function MyLearningHero({
@@ -13,6 +14,7 @@ export function MyLearningHero({
   activeCoursesCount,
   completedLessonsCount,
   completedCoursesCount,
+  savedCoursesCount = 0,
 }: MyLearningHeroProps) {
   const greeting = userName ? `Welcome back, ${userName}` : "Welcome back";
 
@@ -75,6 +77,23 @@ export function MyLearningHero({
                 </span>
                 <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
                   Completed
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Saved / Bookmarked Courses */}
+          {savedCoursesCount > 0 && (
+            <div className="flex items-center gap-3 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-[#FAF9F6] dark:bg-neutral-900/80 px-4 py-2.5 shadow-2xs">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-50 dark:bg-primary-500/15 text-primary-600 dark:text-primary-400">
+                <Bookmark className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <span className="block text-lg font-bold text-neutral-900 dark:text-neutral-100 leading-none">
+                  {savedCoursesCount}
+                </span>
+                <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                  Saved
                 </span>
               </div>
             </div>

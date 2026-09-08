@@ -92,6 +92,7 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
   // Fetch progress if authenticated
   let progressPercentage = 0;
   let completedLessonIdsList: string[] = [];
+  let isCourseBookmarked = false;
   try {
     const { auth } = await import("@clerk/nextjs/server");
     const authData = await auth();
@@ -99,25 +100,34 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
     
     if (userId) {
       const progressDoc = await sanityFetch({
-        query: `*[_type == "progress" && clerkUserId == $userId][0] { completedLessons }`,
+        query: `*[_type == "progress" && clerkUserId == $userId][0] { 
+          completedLessons,
+          "bookmarkedCourseIds": coalesce(bookmarkedCourses[]->_id, [])
+        }`,
         params: { userId },
-        tags: [`progress-${userId}`],
+        tags: [`progress-${userId}`, `bookmarks-${userId}`],
         revalidate: 0,
       }) as any;
       
-      if (progressDoc && Array.isArray(progressDoc.completedLessons) && course?.modules) {
-        completedLessonIdsList = progressDoc.completedLessons.map((ref: any) => ref._ref).filter(Boolean);
-        const completedLessonIdsSet = new Set(completedLessonIdsList);
-        const courseLessonIds = course.modules.flatMap((m: any) => m.lessons || []).map((l: any) => l._id).filter(Boolean);
-        
-        if (courseLessonIds.length > 0) {
-          let completedInCourse = 0;
-          for (const id of courseLessonIds) {
-            if (completedLessonIdsSet.has(id)) {
-              completedInCourse++;
+      if (progressDoc) {
+        if (course?._id && progressDoc.bookmarkedCourseIds?.includes(course._id)) {
+          isCourseBookmarked = true;
+        }
+
+        if (Array.isArray(progressDoc.completedLessons) && course?.modules) {
+          completedLessonIdsList = progressDoc.completedLessons.map((ref: any) => ref._ref).filter(Boolean);
+          const completedLessonIdsSet = new Set(completedLessonIdsList);
+          const courseLessonIds = course.modules.flatMap((m: any) => m.lessons || []).map((l: any) => l._id).filter(Boolean);
+          
+          if (courseLessonIds.length > 0) {
+            let completedInCourse = 0;
+            for (const id of courseLessonIds) {
+              if (completedLessonIdsSet.has(id)) {
+                completedInCourse++;
+              }
             }
+            progressPercentage = Math.round((completedInCourse / courseLessonIds.length) * 100);
           }
-          progressPercentage = Math.round((completedInCourse / courseLessonIds.length) * 100);
         }
       }
     }
@@ -182,7 +192,14 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
                   <div className="inline-flex items-center rounded-md border border-[#FED7AA] dark:border-primary-500/30 bg-[#FFF5EE] dark:bg-primary-500/10 px-2.5 py-0.5 text-[11px] font-bold tracking-wider text-[#EA580C] dark:text-primary-400 uppercase select-none">
                     {lessonLabel}
                   </div>
-                  <BookmarkButton courseId={lesson._id} />
+                  {course?._id && (
+                    <BookmarkButton
+                      courseId={course._id}
+                      courseTitle={course.title}
+                      initialIsBookmarked={isCourseBookmarked}
+                      size="sm"
+                    />
+                  )}
                 </div>
 
                 <h1 className="font-display text-3xl sm:text-4xl lg:text-[42px] font-bold text-neutral-900 dark:text-neutral-50 tracking-tight leading-tight mb-3">

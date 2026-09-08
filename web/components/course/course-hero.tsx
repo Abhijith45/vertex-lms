@@ -41,6 +41,7 @@ interface CourseHeroProps {
   totalModulesCount: number;
   continueLearningUrl?: string;
   progressPercentage?: number;
+  initialIsBookmarked?: boolean;
 }
 
 export function CourseHero({
@@ -49,6 +50,7 @@ export function CourseHero({
   totalModulesCount,
   continueLearningUrl = "#",
   progressPercentage = 0,
+  initialIsBookmarked = false,
 }: CourseHeroProps) {
   let ctaLabel = "Start Learning";
   let CtaIcon = ArrowRight;
@@ -165,7 +167,11 @@ export function CourseHero({
               <CtaIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2} />
             </Link>
 
-            <BookmarkButton courseId={course._id} />
+            <BookmarkButton
+              courseId={course._id}
+              initialIsBookmarked={initialIsBookmarked}
+              courseTitle={course.title}
+            />
           </div>
         </div>
       </div>
