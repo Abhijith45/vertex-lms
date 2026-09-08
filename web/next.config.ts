@@ -54,6 +54,21 @@ const nextConfig: NextConfig = {
         destination: "/video-embedding-policy",
         permanent: true,
       },
+      {
+        source: "/security",
+        destination: "/security-notice",
+        permanent: true,
+      },
+      {
+        source: "/user-rights",
+        destination: "/user-rights-portal",
+        permanent: true,
+      },
+      {
+        source: "/dpa",
+        destination: "/data-processing-agreement",
+        permanent: true,
+      },
     ];
   },
   // This is required to support PostHog trailing slash API requests

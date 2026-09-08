@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Mail, Shield, FileText, Cookie, GraduationCap, Heart, Accessibility, ShieldAlert, Video } from "lucide-react";
+import { Mail, Shield, FileText, Cookie, GraduationCap, Heart, Accessibility, ShieldAlert, Video, Lock, FileCheck2 } from "lucide-react";
 import { VertexLogo } from "@/components/home/vertex-logo";
 
 export function Footer() {
@@ -64,6 +64,14 @@ export function Footer() {
                   AI Content Search
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/user-rights-portal"
+                  className="text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors"
+                >
+                  User Rights & Data Export
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -72,7 +80,7 @@ export function Footer() {
             <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-200">
               Compliance & Legal
             </h3>
-            <ul className="space-y-2.5 text-sm">
+            <ul className="space-y-2 text-xs sm:text-sm">
               <li>
                 <Link
                   href="/privacy-policy"
@@ -102,6 +110,15 @@ export function Footer() {
               </li>
               <li>
                 <Link
+                  href="/security-notice"
+                  className="inline-flex items-center gap-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors"
+                >
+                  <Lock className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500" />
+                  <span>Security Notice</span>
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/accessibility-statement"
                   className="inline-flex items-center gap-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors"
                 >
@@ -125,6 +142,15 @@ export function Footer() {
                 >
                   <Video className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500" />
                   <span>Video-Embedding Policy</span>
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/data-processing-agreement"
+                  className="inline-flex items-center gap-1.5 text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white transition-colors"
+                >
+                  <FileCheck2 className="h-3.5 w-3.5 text-neutral-400 dark:text-neutral-500" />
+                  <span>Data Processing Agreement</span>
                 </Link>
               </li>
             </ul>
@@ -179,6 +205,10 @@ export function Footer() {
               Cookies
             </Link>
             <span>•</span>
+            <Link href="/security-notice" className="hover:underline">
+              Security
+            </Link>
+            <span>•</span>
             <Link href="/accessibility-statement" className="hover:underline">
               Accessibility
             </Link>
@@ -189,6 +219,14 @@ export function Footer() {
             <span>•</span>
             <Link href="/video-embedding-policy" className="hover:underline">
               Video Policy
+            </Link>
+            <span>•</span>
+            <Link href="/user-rights-portal" className="hover:underline">
+              User Rights
+            </Link>
+            <span>•</span>
+            <Link href="/data-processing-agreement" className="hover:underline">
+              DPA
             </Link>
           </div>
         </div>
