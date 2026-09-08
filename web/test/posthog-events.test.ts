@@ -57,7 +57,7 @@ export function calculateWatchDepthMilestones(
   return newMilestones;
 }
 
-export function validateEventPayload(event: string, properties: Record<string, any>) {
+export function validateEventPayload(event: string, properties: Record<string, unknown>) {
   // 1. Check snake_case event name
   assert.match(
     event,

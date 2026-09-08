@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useId } from "react";
 import { useRouter } from "next/navigation";
-import { useUser, SignInButton, SignUpButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
 import {
   Play,
   Pause,
@@ -16,7 +16,6 @@ import {
   Subtitles,
   Settings,
   Check,
-  Lock,
 } from "lucide-react";
 import {
   parseVideoUrl,
@@ -40,9 +39,42 @@ interface VideoEmbedProps {
 
 declare global {
   interface Window {
-    YT: any;
+    YT: {
+      Player: new (
+        elementId: string,
+        config: {
+          videoId: string;
+          playerVars?: Record<string, number | string>;
+          events?: Record<string, (event: { data?: number; target?: unknown }) => void>;
+        }
+      ) => YouTubePlayerInstance;
+      PlayerState: { PLAYING: number; PAUSED: number; ENDED: number };
+    };
     onYouTubeIframeAPIReady: () => void;
   }
+}
+
+interface YouTubePlayerInstance {
+  playVideo(): void;
+  pauseVideo(): void;
+  stopVideo(): void;
+  seekTo(seconds: number, allowSeekAhead: boolean): void;
+  getPlayerState(): number;
+  getCurrentTime(): number;
+  getDuration(): number;
+  getVolume(): number;
+  setVolume(volume: number): void;
+  isMuted(): boolean;
+  mute(): void;
+  unMute(): void;
+  setPlaybackRate(rate: number): void;
+  setPlaybackQuality(quality: string): void;
+  getAvailablePlaybackRates(): number[];
+  getAvailableQualityLevels(): string[];
+  destroy(): void;
+  loadModule?(moduleName: string): void;
+  unloadModule?(moduleName: string): void;
+  setOption?(module: string, option: string, value: unknown): void;
 }
 
 const QUALITY_OPTIONS = [
@@ -62,7 +94,6 @@ export function VideoEmbed({
   nextLessonSlug,
   lessonSlug,
   courseSlug,
-  freePreview = false,
 }: VideoEmbedProps) {
   const router = useRouter();
   const { isSignedIn, isLoaded: isAuthLoaded } = useUser();
@@ -92,7 +123,7 @@ export function VideoEmbed({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const playerInstanceRef = useRef<any>(null);
+  const playerInstanceRef = useRef<YouTubePlayerInstance | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -112,24 +143,23 @@ export function VideoEmbed({
   const [isDraggingProgress, setIsDraggingProgress] = useState(false);
   const [apiReady, setApiReady] = useState(false);
 
-  // Stable references for state that shouldn't trigger player recreation or timer resets
+  // Stable references for state that shouldn't trigger player recreation or timer resets.
+  // Assigned in an effect so we don't mutate refs during render.
   const autoplayNextRef = useRef(autoplayNext);
-  autoplayNextRef.current = autoplayNext;
-
   const nextLessonSlugRef = useRef(nextLessonSlug);
-  nextLessonSlugRef.current = nextLessonSlug;
-
   const isPlayingRef = useRef(isPlaying);
-  isPlayingRef.current = isPlaying;
-
   const isSettingsOpenRef = useRef(isSettingsOpen);
-  isSettingsOpenRef.current = isSettingsOpen;
-
   const isHoveringVolumeRef = useRef(isHoveringVolume);
-  isHoveringVolumeRef.current = isHoveringVolume;
-
   const isDraggingProgressRef = useRef(isDraggingProgress);
-  isDraggingProgressRef.current = isDraggingProgress;
+
+  useEffect(() => {
+    autoplayNextRef.current = autoplayNext;
+    nextLessonSlugRef.current = nextLessonSlug;
+    isPlayingRef.current = isPlaying;
+    isSettingsOpenRef.current = isSettingsOpen;
+    isHoveringVolumeRef.current = isHoveringVolume;
+    isDraggingProgressRef.current = isDraggingProgress;
+  }, [autoplayNext, nextLessonSlug, isPlaying, isSettingsOpen, isHoveringVolume, isDraggingProgress]);
 
   const parsed = parseVideoUrl(videoUrl, startSeconds);
 

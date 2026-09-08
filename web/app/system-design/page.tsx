@@ -1,5 +1,12 @@
 "use client";
 
+import { notFound } from "next/navigation";
+
+// Dev-only reference page — not accessible in production
+if (process.env.NODE_ENV === "production") {
+  notFound();
+}
+
 import {
   Bell,
   Search,

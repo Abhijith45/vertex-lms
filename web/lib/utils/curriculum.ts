@@ -56,7 +56,7 @@ export function resolveCurriculum(
 
   modules.forEach((mod, mIdx) => {
     (mod.lessons || []).forEach((les, lIdx) => {
-      const slug = typeof les.slug === "object" ? (les.slug as any)?.current : les.slug;
+      const slug = typeof les.slug === "object" ? (les.slug as { current: string })?.current : les.slug;
       allOrdered.push({
         lesson: { ...les, slug },
         module: mod,

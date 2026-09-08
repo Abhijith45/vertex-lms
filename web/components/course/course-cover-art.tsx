@@ -1,8 +1,8 @@
 import React from "react";
 import Image from "next/image";
 import { urlFor } from "@/sanity/lib/image";
-
 interface CourseCoverArtProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   coverImage?: any;
   title: string;
   slug: string;
@@ -76,10 +76,15 @@ export function CourseCoverArt({ coverImage, title, slug }: CourseCoverArtProps)
     );
   }
 
-  // If cover image exists from Sanity
+  // If cover image exists from Sanity — compute URL outside JSX so errors are catchable
   if (coverImage) {
+    let imageUrl: string | null = null;
     try {
-      const imageUrl = urlFor(coverImage).width(600).height(600).url();
+      imageUrl = urlFor(coverImage).width(600).height(600).url();
+    } catch {
+      // Fallback below
+    }
+    if (imageUrl) {
       return (
         <div className="relative aspect-square w-full max-w-[280px] sm:max-w-[300px] md:max-w-[320px] shrink-0 overflow-hidden rounded-2xl bg-neutral-900 shadow-md">
           <Image
@@ -92,8 +97,6 @@ export function CourseCoverArt({ coverImage, title, slug }: CourseCoverArtProps)
           />
         </div>
       );
-    } catch {
-      // Fallback below
     }
   }
 

@@ -20,6 +20,7 @@ interface CourseHeroProps {
     title: string;
     slug: string;
     summary?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     coverImage?: any;
     level?: string;
     popular?: boolean;

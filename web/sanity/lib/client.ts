@@ -23,14 +23,14 @@ export const serverClient = createClient({
  * Cached fetch helper for Sanity data using Next.js ISR (Incremental Static Regeneration).
  * Configured with default 5-minute (300s) revalidation and tag-based cache invalidation.
  */
-export async function sanityFetch<T = any>({
+export async function sanityFetch<T = unknown>({
   query,
   params = {},
   revalidate = 300,
   tags = [],
 }: {
   query: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
   revalidate?: number | false;
   tags?: string[];
 }): Promise<T> {

@@ -12,7 +12,7 @@ import { getCoursesQuery } from "@/sanity/lib/queries";
 import { formatDuration } from "@/lib/utils/format";
 
 export default async function HomePage() {
-  // Fetch live courses from Sanity with ISR caching
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let courses: any[] = [];
   try {
     courses = await sanityFetch({
@@ -62,9 +62,11 @@ export default async function HomePage() {
   const displayCourses =
     courses && courses.length > 0
       ? courses.slice(0, 3).map((c) => {
-          // Compute total duration from lessons
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const totalSeconds =
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             c.modules?.flatMap((m: any) => m.lessons || []).reduce(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (acc: number, l: any) => acc + (l?.duration || 0),
               0
             ) || 0;

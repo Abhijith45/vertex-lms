@@ -99,7 +99,7 @@ export async function GET(req: Request) {
       data.categories.forEach((cat: string) => cat && keywordSet.add(cat.trim()));
     }
     if (Array.isArray(data.lessons)) {
-      data.lessons.forEach((l: any) => l?.title && keywordSet.add(l.title.trim()));
+      data.lessons.forEach((l: { title?: string }) => l?.title && keywordSet.add(l.title.trim()));
     }
     if (Array.isArray(data.chapters)) {
       data.chapters.flat().forEach((ch: string) => ch && keywordSet.add(ch.trim()));
@@ -121,7 +121,7 @@ export async function GET(req: Request) {
       .slice(0, 5);
 
     // Format verified courses
-    const verifiedCourses = (data.courses || []).map((c: any) => ({
+    const verifiedCourses = (data.courses || []).map((c: { title: string; slug: string; category?: string }) => ({
       title: c.title,
       slug: c.slug,
       category: c.category || "Course",
@@ -141,8 +141,9 @@ export async function GET(req: Request) {
         "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=86400",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error fetching search suggestions:", error);
+    const errMsg = error instanceof Error ? error.message : undefined;
     return NextResponse.json(
       {
         keywords: [],
