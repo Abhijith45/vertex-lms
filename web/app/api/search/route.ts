@@ -8,7 +8,12 @@ import { auth } from "@clerk/nextjs/server";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { SimpleMemoryCache } from "@/lib/cache";
-import { normalizeSearchQuery, resolveVideoMomentsTwoStage } from "@/lib/utils/search";
+import {
+  normalizeSearchQuery,
+  resolveVideoMomentsTwoStage,
+  tokenizeSearchQuery,
+  buildGroqOrMatch,
+} from "@/lib/utils/search";
 
 export const maxDuration = 60; // Allow enough time for multi-step MCP tool calls
 
@@ -47,7 +52,8 @@ function trackSearchServer(
   userId: string | null,
   query: string,
   results: SearchResults,
-  isCached: boolean
+  isCached: boolean,
+  source: string = "server_api"
 ) {
   try {
     const posthog = getPostHogClient();
@@ -63,7 +69,8 @@ function trackSearchServer(
         video_moments_count: results.videoMoments?.length || 0,
         has_results: totalResults > 0,
         is_cached: isCached,
-        source: "server_api",
+        is_cold_start: source === "cold_start_fallback",
+        source,
       },
     });
   } catch (err) {
@@ -144,7 +151,7 @@ export async function GET(req: Request) {
   const cacheKey = query.toLowerCase();
   const cachedData = searchResultCache.get(cacheKey);
   if (cachedData) {
-    trackSearchServer(userId, query, cachedData, true);
+    trackSearchServer(userId, query, cachedData, true, "cache");
     return NextResponse.json(cachedData, {
       headers: {
         "X-Cache": "HIT",
@@ -269,105 +276,127 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
     // Otherwise fall through to Sanity GROQ search for maximum recall
     throw new Error("No MCP results returned, executing direct Sanity search");
   } catch (error: any) {
-    if (error?.message === "WAKING_UP" || error?.name === "AbortError" || error?.cause?.message === "WAKING_UP") {
-      return NextResponse.json(
-        { status: "waking_up", message: "Content is loading..." },
-        { status: 503 }
-      );
+    const isColdStart =
+      error?.message === "WAKING_UP" ||
+      error?.name === "AbortError" ||
+      error?.cause?.message === "WAKING_UP";
+
+    if (!isColdStart) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      console.warn("Search LLM/MCP error or fallback triggered:", errMsg);
     }
 
-    const errMsg = error instanceof Error ? error.message : String(error);
-    console.warn("Search LLM/MCP error or fallback triggered:", errMsg);
-    
-    // Direct Sanity GROQ Search Fallback
+    // Direct Sanity GROQ search fallback. This runs for the cold-start abort too,
+    // because it queries Sanity directly and does not depend on the LLM/MCP backend
+    // that is still warming up — so the user gets grounded results instead of a
+    // skeleton that keeps polling.
     try {
       const { serverClient } = await import("@/sanity/lib/client");
-      const cleanWords = query
-        .replace(/[^a-zA-Z0-9\s]/g, " ")
-        .trim()
-        .split(/\s+/)
-        .filter(Boolean);
-      
-      const queryPattern = cleanWords.length > 0 ? `*${cleanWords.join("*")}*` : `*${query}*`;
-      const orConditions = cleanWords.map(w => `*${w}*`).join(" ");
+      const cleanWords = tokenizeSearchQuery(query);
 
-      // 1. Match Lessons with multi-field OR matching
-      const lessonsQuery = `*[_type == "lesson" && (
-        title match "${queryPattern}" ||
-        title match "${orConditions}" ||
-        pt::text(notes) match "${queryPattern}" ||
-        pt::text(notes) match "${orConditions}" ||
-        count(keyPoints[@ match "${queryPattern}"]) > 0
-      )][0...15] {
-        title,
-        "slug": slug.current,
-        "description": coalesce(pt::text(notes), title),
-        "courseTitle": *[_type == "course" && references(^._id)][0].title,
-        "moduleLabel": "Lesson Match",
-        keyPoints
-      }`;
+      let fallbackResults: SearchResults = { lessons: [], videoMoments: [] };
 
-      // 2. Match Video Moments (chapters and chunks)
-      const videosQuery = `*[_type == "video" && (
-        count(chapters[label match "${queryPattern}"]) > 0 ||
-        count(chapters[label match "${orConditions}"]) > 0 ||
-        count(chunks[text match "${queryPattern}"]) > 0 ||
-        count(chunks[text match "${orConditions}"]) > 0
-      )][0...15] {
-        url,
-        "matchedChapters": chapters[label match "${queryPattern}" || label match "${orConditions}"][0...3],
-        "matchedChunks": chunks[text match "${queryPattern}" || text match "${orConditions}"][0...3]
-      }`;
+      if (cleanWords.length > 0) {
+        // 1. Match Lessons: any word in title, notes, or key points.
+        const lessonsQuery = `*[_type == "lesson" && (
+          ${buildGroqOrMatch("title", cleanWords)} ||
+          ${buildGroqOrMatch("pt::text(notes)", cleanWords)} ||
+          count(keyPoints[${buildGroqOrMatch("@", cleanWords)}]) > 0
+        )][0...15] {
+          title,
+          "slug": slug.current,
+          "description": coalesce(pt::text(notes), title),
+          "courseTitle": *[_type == "course" && references(^._id)][0].title,
+          "moduleLabel": "Lesson Match",
+          keyPoints
+        }`;
 
-      const [matchedLessons, matchedVideos] = await Promise.all([
-        serverClient.fetch(lessonsQuery),
-        serverClient.fetch(videosQuery),
-      ]);
+        // 2. Match Video Moments: any word in chapter labels or transcript chunks.
+        // The filter and the projection must use the same expression so the
+        // "has a match" count agrees with the chapters/chunks actually returned.
+        const labelMatch = buildGroqOrMatch("label", cleanWords);
+        const textMatch = buildGroqOrMatch("text", cleanWords);
+        const videosQuery = `*[_type == "video" && (
+          count(chapters[${labelMatch}]) > 0 ||
+          count(chunks[${textMatch}]) > 0
+        )][0...15] {
+          url,
+          "matchedChapters": chapters[${labelMatch}][0...3],
+          "matchedChunks": chunks[${textMatch}][0...3]
+        }`;
 
-      const videoMoments: any[] = [];
-      for (const v of matchedVideos) {
-        // Resolve lesson using this video URL
-        const lesson = await serverClient.fetch(
-          `*[_type == "lesson" && videoUrl == "${v.url}"][0]{
-            title,
-            "slug": slug.current,
-            "posterUrl": poster.asset->url,
-            "courseTitle": *[_type == "course" && references(^._id)][0].title
-          }`
-        );
+        const [matchedLessons, matchedVideos] = await Promise.all([
+          serverClient.fetch(lessonsQuery),
+          serverClient.fetch(videosQuery),
+        ]);
 
-        if (!lesson || !lesson.slug || !lesson.courseTitle) continue;
+        const videoMoments: any[] = [];
+        for (const v of matchedVideos) {
+          // Resolve lesson using this video URL
+          const lesson = await serverClient.fetch(
+            `*[_type == "lesson" && videoUrl == "${v.url}"][0]{
+              title,
+              "slug": slug.current,
+              "posterUrl": poster.asset->url,
+              "courseTitle": *[_type == "course" && references(^._id)][0].title
+            }`
+          );
 
-        const moments = resolveVideoMomentsTwoStage(v.matchedChapters, v.matchedChunks, 3);
-        for (const m of moments) {
-          videoMoments.push({
-            lessonTitle: lesson.title || "Lesson Video",
-            lessonSlug: lesson.slug,
-            courseTitle: lesson.courseTitle,
-            description: m.description,
-            startSeconds: m.startSeconds,
-            thumbnailUrl: lesson.posterUrl,
-            clipLength: m.clipLength,
-          });
+          if (!lesson || !lesson.slug || !lesson.courseTitle) continue;
+
+          const moments = resolveVideoMomentsTwoStage(v.matchedChapters, v.matchedChunks, 3);
+          for (const m of moments) {
+            videoMoments.push({
+              lessonTitle: lesson.title || "Lesson Video",
+              lessonSlug: lesson.slug,
+              courseTitle: lesson.courseTitle,
+              description: m.description,
+              startSeconds: m.startSeconds,
+              thumbnailUrl: lesson.posterUrl,
+              clipLength: m.clipLength,
+            });
+          }
         }
+
+        fallbackResults = {
+          lessons: (matchedLessons as LessonResult[]).filter((l) => l.courseTitle && l.slug),
+          videoMoments,
+        };
       }
 
-      const fallbackResults: SearchResults = {
-        lessons: (matchedLessons as LessonResult[]).filter((l) => l.courseTitle && l.slug),
-        videoMoments,
-      };
+      const hasResults =
+        fallbackResults.lessons.length > 0 || fallbackResults.videoMoments.length > 0;
 
-      searchResultCache.set(cacheKey, fallbackResults);
-      trackSearchServer(userId, query, fallbackResults, false);
+      // Never cache an empty result: a warm retry could return real matches.
+      if (hasResults) {
+        searchResultCache.set(cacheKey, fallbackResults);
+      }
+      trackSearchServer(
+        userId,
+        query,
+        fallbackResults,
+        false,
+        isColdStart ? "cold_start_fallback" : "llm_fallback"
+      );
       return NextResponse.json(fallbackResults, {
         headers: {
           "X-Cache": "MISS",
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+          "Cache-Control": hasResults
+            ? "public, s-maxage=300, stale-while-revalidate=600"
+            : "no-store",
         },
       });
     } catch (fallbackError: unknown) {
       const errMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
       console.error("Direct search fallback error:", fallbackError);
+      // On a cold start, keep the polling contract so the client retries once the
+      // backend is warm; otherwise surface the failure.
+      if (isColdStart) {
+        return NextResponse.json(
+          { status: "waking_up", message: "Content is loading..." },
+          { status: 503 }
+        );
+      }
       return NextResponse.json({ error: errMsg }, { status: 500 });
     }
   }

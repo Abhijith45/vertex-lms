@@ -106,7 +106,10 @@ function SearchContent() {
           setIsWakingUp(false);
         }
       } finally {
-        if (isMounted && !timeoutId) {
+        // Clear the skeleton on every settled attempt, including a successful
+        // retry after a cold start. The waking-up spinner is driven by
+        // `isWakingUp`, so it stays visible while a retry is pending.
+        if (isMounted) {
           setIsLoading(false);
         }
       }
@@ -129,6 +132,9 @@ function SearchContent() {
 
   const totalResults = allItems.length;
   const uniqueCoursesCount = new Set(allItems.map((item) => item.data.courseTitle)).size;
+  // Only show the count summary once results have actually arrived, never while
+  // loading or waking up — otherwise it reads "Found 0 results across 0 courses".
+  const showResultsSummary = !isLoading && !isWakingUp && !!results;
   const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE) || 1;
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalResults);
@@ -168,9 +174,11 @@ function SearchContent() {
               <h1 className="text-display-2 sm:text-display-1 text-neutral-900 dark:text-neutral-100 mb-3">
                 Results for <span className="text-primary-500">&quot;{query}&quot;</span>
               </h1>
-              <p className="text-body-lg text-neutral-500 dark:text-neutral-400 mb-10">
-                Found {totalResults} result{totalResults === 1 ? "" : "s"} across {uniqueCoursesCount} course{uniqueCoursesCount === 1 ? "" : "s"}
-              </p>
+              {showResultsSummary && (
+                <p className="text-body-lg text-neutral-500 dark:text-neutral-400 mb-10">
+                  Found {totalResults} result{totalResults === 1 ? "" : "s"} across {uniqueCoursesCount} course{uniqueCoursesCount === 1 ? "" : "s"}
+                </p>
+              )}
               <div className="w-full max-w-4xl mx-auto">
                 <SearchInput initialQuery={query} />
               </div>

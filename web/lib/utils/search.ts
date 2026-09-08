@@ -23,6 +23,29 @@ export function normalizeSearchQuery(raw: string | null | undefined): string {
 }
 
 /**
+ * Splits a search query into clean alphanumeric words.
+ * Punctuation becomes a separator, so "React.js (v19)" yields ["React", "js", "v19"].
+ */
+export function tokenizeSearchQuery(query: string): string[] {
+  return query
+    .replace(/[^a-zA-Z0-9\s]/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/**
+ * Builds a GROQ OR match expression for one field across every word.
+ * Each word becomes its own wildcard term, so a multi-word query matches a
+ * field that contains ANY of the words (high recall). A single joined pattern
+ * such as "*react*performance*" is one token and never matches separate words.
+ * Returns an empty string when there are no words to match.
+ */
+export function buildGroqOrMatch(field: string, words: string[]): string {
+  return words.map((w) => `${field} match "*${w}*"`).join(" || ");
+}
+
+/**
  * Formats a search URL with URI-encoded query parameter.
  */
 export function formatSearchUrl(query: string): string {
