@@ -1,6 +1,11 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { normalizeSearchQuery, formatSearchUrl } from "../lib/utils/search.ts";
+import {
+  normalizeSearchQuery,
+  formatSearchUrl,
+  tokenizeSearchQuery,
+  buildGroqOrMatch,
+} from "../lib/utils/search.ts";
 
 describe("OpenAI Search Analyzer & Query Processing Unit Tests", () => {
   const testKeywords = [
@@ -48,22 +53,32 @@ describe("OpenAI Search Analyzer & Query Processing Unit Tests", () => {
   });
 
   describe("GROQ Search Pattern Formulation", () => {
-    test("constructs valid wildcard token queries from user keywords", () => {
-      const query = "React Performance";
-      const cleanWords = query.trim().split(/\s+/).filter(Boolean);
-      const queryPattern = `*${cleanWords.join("*")}*`;
-      const orConditions = cleanWords.map((w) => `*${w}*`).join(" ");
+    test("builds per-word OR conditions so multi-word queries match any word", () => {
+      const words = tokenizeSearchQuery("React Performance");
+      assert.deepEqual(words, ["React", "Performance"]);
 
-      assert.equal(queryPattern, "*React*Performance*");
-      assert.equal(orConditions, "*React* *Performance*");
+      const condition = buildGroqOrMatch("title", words);
+      assert.equal(
+        condition,
+        `title match "*React*" || title match "*Performance*"`
+      );
     });
 
     test("handles single word search pattern", () => {
-      const query = "docker";
-      const cleanWords = query.trim().split(/\s+/).filter(Boolean);
-      const queryPattern = `*${cleanWords.join("*")}*`;
+      const words = tokenizeSearchQuery("docker");
+      const condition = buildGroqOrMatch("title", words);
+      assert.equal(condition, `title match "*docker*"`);
+    });
 
-      assert.equal(queryPattern, "*docker*");
+    test("does not join words into one unmatchable token", () => {
+      // A single "*React*Performance*" token never matches two separate words.
+      const condition = buildGroqOrMatch("title", tokenizeSearchQuery("React Performance"));
+      assert.equal(condition.includes(`"*React*Performance*"`), false);
+    });
+
+    test("returns an empty expression when there are no searchable words", () => {
+      assert.deepEqual(tokenizeSearchQuery("!!! ??? ---"), []);
+      assert.equal(buildGroqOrMatch("title", []), "");
     });
   });
 
