@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
+import { Footer } from "@/components/layout/footer";
 import { CoursesCatalogView, type CourseCatalogItem, type CategoryItem } from "@/components/courses/courses-catalog-view";
 import { sanityFetch } from "@/sanity/lib/client";
 import { getCoursesQuery, getCategoriesQuery } from "@/sanity/lib/queries";
@@ -153,6 +154,9 @@ export default async function AllCoursesPage() {
             />
           </main>
         </div>
+
+        {/* Footer */}
+        <Footer />
 
         {/* Ambient Bottom Skyline Graphic */}
         <BottomGraphic />

@@ -17,6 +17,25 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/privacy",
+        destination: "/privacy-policy",
+        permanent: true,
+      },
+      {
+        source: "/terms",
+        destination: "/terms-of-service",
+        permanent: true,
+      },
+      {
+        source: "/cookies",
+        destination: "/cookie-policy",
+        permanent: true,
+      },
+    ];
+  },
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   images: {

@@ -8,6 +8,7 @@ import { WhatYoullLearn } from "@/components/course/what-youll-learn";
 import { CourseContentAccordion, type ModuleItem } from "@/components/course/course-content-accordion";
 import { StickyCourseProgress } from "@/components/course/sticky-course-progress";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
+import { Footer } from "@/components/layout/footer";
 import { sanityFetch } from "@/sanity/lib/client";
 import { getCourseBySlugQuery } from "@/sanity/lib/queries";
 import { formatDuration } from "@/lib/utils/format";
@@ -224,6 +225,7 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
 
   let continueLearningUrl = defaultFirstLessonUrl;
   let progressPercentage = 0;
+  let isBookmarked = false;
   const completedLessonIdList: string[] = [];
 
   // Fetch progress if authenticated
@@ -238,14 +240,18 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
           resumePositions[]{
             positionSeconds,
             lesson->{ _id, "slug": slug.current }
-          }
+          },
+          "bookmarkedCourseIds": coalesce(bookmarkedCourses[]->_id, [])
         }`,
         params: { userId },
-        tags: [`progress-${userId}`],
+        tags: [`progress-${userId}`, `bookmarks-${userId}`],
         revalidate: 0,
       }) as any;
       
       if (progressDoc) {
+        if (progressDoc.bookmarkedCourseIds?.includes(course._id)) {
+          isBookmarked = true;
+        }
         const completedLessonIds = new Set<string>(
           (progressDoc.completedLessons || [])
             .map((l: any) => l?._id)
@@ -339,6 +345,7 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
               totalModulesCount={totalModulesCount}
               continueLearningUrl={continueLearningUrl}
               progressPercentage={progressPercentage}
+              initialIsBookmarked={isBookmarked}
             />
 
             {/* What You'll Learn Section */}
@@ -354,6 +361,9 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
             />
           </main>
         </div>
+
+        {/* Footer */}
+        <Footer />
 
         {/* Ambient Bottom Skyline Graphic */}
         <div className="relative w-full">

@@ -3,9 +3,11 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
+import { Footer } from "@/components/layout/footer";
 import { MyLearningHero } from "@/components/my-learning/my-learning-hero";
 import { InProgressCard, type InProgressCourseData } from "@/components/my-learning/in-progress-card";
 import { CompletedCourseCard, type CompletedCourseData } from "@/components/my-learning/completed-course-card";
+import { BookmarkedCourseCard, type BookmarkedCourseData } from "@/components/my-learning/bookmarked-course-card";
 import { EmptyLearningState } from "@/components/my-learning/empty-learning-state";
 import { serverClient } from "@/sanity/lib/client";
 import { formatDuration } from "@/lib/utils/format";
@@ -38,6 +40,22 @@ interface ProgressQueryResponse {
           slug: string;
         };
       };
+    }>;
+    bookmarkedCourses?: Array<{
+      _id: string;
+      title: string;
+      slug: string;
+      summary?: string;
+      level?: string;
+      category?: {
+        title?: string;
+      };
+      modules?: Array<{
+        lessons?: Array<{
+          _id: string;
+          duration?: number;
+        }>;
+      }>;
     }>;
   } | null;
   courses: Array<{
@@ -85,7 +103,23 @@ const myLearningQuery = `
           "slug": slug.current
         }
       }
-    }
+    },
+    "bookmarkedCourses": coalesce(bookmarkedCourses[]->{
+      _id,
+      title,
+      "slug": slug.current,
+      summary,
+      level,
+      category->{
+        title
+      },
+      modules[]{
+        lessons[]->{
+          _id,
+          duration
+        }
+      }
+    }, [])
   },
   "courses": *[_type == "course"] | order(_createdAt desc) {
     _id,
@@ -229,7 +263,31 @@ export default async function MyLearningPage() {
     }
   }
 
-  const hasAnyLearning = inProgressList.length > 0 || completedList.length > 0;
+  const bookmarkedList: BookmarkedCourseData[] = (progress?.bookmarkedCourses || []).map((c) => {
+    const courseLessons = (c.modules || []).flatMap((m) => m.lessons || []).filter(Boolean);
+    const totalDurationSeconds = courseLessons.reduce(
+      (acc, l) => acc + (l.duration || 0),
+      0
+    );
+    const totalDurationText =
+      totalDurationSeconds > 0 ? formatDuration(totalDurationSeconds) : "2h 30m";
+    const levelDisplay = c.level
+      ? c.level.charAt(0).toUpperCase() + c.level.slice(1)
+      : "Intermediate";
+
+    return {
+      courseId: c._id,
+      courseTitle: c.title,
+      courseSlug: c.slug,
+      category: c.category?.title,
+      level: levelDisplay,
+      summary: c.summary,
+      totalDurationText,
+      totalLessons: courseLessons.length || 10,
+    };
+  });
+
+  const hasAnyLearning = inProgressList.length > 0 || completedList.length > 0 || bookmarkedList.length > 0;
   const totalCompletedLessons = progress?.completedLessons?.length || 0;
 
   return (
@@ -246,6 +304,7 @@ export default async function MyLearningPage() {
             activeCoursesCount={inProgressList.length}
             completedLessonsCount={totalCompletedLessons}
             completedCoursesCount={completedList.length}
+            savedCoursesCount={bookmarkedList.length}
           />
 
           {/* Main Content Area */}
@@ -299,10 +358,35 @@ export default async function MyLearningPage() {
                     </div>
                   </section>
                 )}
+
+                {/* ──────────────────────────────────────────────────────────
+                   SAVED / BOOKMARKED COURSES SECTION
+                   ────────────────────────────────────────────────────────── */}
+                {bookmarkedList.length > 0 && (
+                  <section>
+                    <div className="flex items-center gap-2.5 mb-6">
+                      <h2 className="font-display text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+                        Saved for Later
+                      </h2>
+                      <span className="flex h-5 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-500/20 border border-primary-200 dark:border-primary-500/30 px-2 text-xs font-bold text-primary-700 dark:text-primary-400">
+                        {bookmarkedList.length}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {bookmarkedList.map((course) => (
+                        <BookmarkedCourseCard key={course.courseId} course={course} />
+                      ))}
+                    </div>
+                  </section>
+                )}
               </div>
             )}
           </main>
         </div>
+
+        {/* Footer */}
+        <Footer />
 
         {/* Bottom Graphic Graphic Banner */}
         <BottomGraphic />

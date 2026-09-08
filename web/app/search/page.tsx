@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState, useMemo, Suspense } from "react";
 import { Navbar } from "@/components/layout/navbar";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
+import { Footer } from "@/components/layout/footer";
 import { SearchInput } from "@/components/search/search-input";
 import { LessonResultCard } from "@/components/search/lesson-result-card";
 import { VideoResultCard } from "@/components/search/video-result-card";
@@ -398,6 +399,9 @@ function SearchContent() {
             )}
           </main>
         </div>
+
+        {/* Footer */}
+        <Footer />
 
         {/* Ambient Bottom Skyline Graphic Footer */}
         <BottomGraphic />
