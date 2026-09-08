@@ -59,10 +59,10 @@ export function CourseContentAccordion({
     <section className="mb-24">
       {/* Header Row */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="font-display text-2xl sm:text-[28px] font-bold text-neutral-900 tracking-tight">
+        <h2 className="font-display text-2xl sm:text-[28px] font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">
           Course Content
         </h2>
-        <span className="text-sm font-medium text-neutral-500">
+        <span className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
           {totalModulesCount} modules • {totalDurationFormatted}
         </span>
       </div>
@@ -84,7 +84,7 @@ export function CourseContentAccordion({
           return (
             <div
               key={idx}
-              className="group rounded-2xl border border-neutral-200/80 bg-white transition-all duration-200 hover:border-neutral-300 shadow-2xs overflow-hidden"
+              className="group rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 transition-all duration-200 hover:border-neutral-300 dark:hover:border-neutral-700 shadow-2xs overflow-hidden"
             >
               {/* Module Header / Trigger */}
               <button
@@ -95,17 +95,17 @@ export function CourseContentAccordion({
               >
                 <div className="flex items-center gap-4 sm:gap-5 flex-1 min-w-0">
                   {/* Circle Number Badge */}
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 bg-neutral-50/70 text-sm font-semibold text-neutral-700">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-neutral-200 dark:border-neutral-700 bg-neutral-50/70 dark:bg-neutral-800 text-sm font-semibold text-neutral-700 dark:text-neutral-300">
                     {moduleNumber}
                   </div>
 
                   {/* Title and Summary */}
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-sans text-base font-semibold text-neutral-900 group-hover:text-primary-600 transition-colors leading-snug">
+                    <h3 className="font-sans text-base font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors leading-snug">
                       {module.title}
                     </h3>
                     {module.summary && (
-                      <p className="mt-0.5 text-sm text-neutral-500 leading-normal line-clamp-1 sm:line-clamp-2">
+                      <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400 leading-normal line-clamp-1 sm:line-clamp-2">
                         {module.summary}
                       </p>
                     )}
@@ -113,13 +113,13 @@ export function CourseContentAccordion({
                 </div>
 
                 {/* Duration & Expand Chevron */}
-                <div className="flex items-center gap-3 shrink-0 text-neutral-500 text-sm font-medium">
+                <div className="flex items-center gap-3 shrink-0 text-neutral-500 dark:text-neutral-400 text-sm font-medium">
                   <span className="hidden xs:inline whitespace-nowrap">
                     {moduleDurationText}
                   </span>
                   <ChevronDown
-                    className={`h-5 w-5 text-neutral-400 transition-transform duration-200 ${
-                      isOpen ? "rotate-180 text-neutral-700" : "group-hover:text-neutral-600"
+                    className={`h-5 w-5 text-neutral-400 dark:text-neutral-500 transition-transform duration-200 ${
+                      isOpen ? "rotate-180 text-neutral-700 dark:text-neutral-300" : "group-hover:text-neutral-600 dark:group-hover:text-neutral-300"
                     }`}
                   />
                 </div>
@@ -127,7 +127,7 @@ export function CourseContentAccordion({
 
               {/* Collapsible Lessons List */}
               {isOpen && module.lessons && module.lessons.length > 0 && (
-                <div className="border-t border-neutral-100 bg-neutral-50/40 px-5 sm:px-6 py-3 divide-y divide-neutral-100">
+                <div className="border-t border-neutral-100 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-950/40 px-5 sm:px-6 py-3 divide-y divide-neutral-100 dark:divide-neutral-800">
                   {module.lessons.map((lesson, lIdx) => {
                     const lessonSlug =
                       typeof lesson.slug === "object"
@@ -143,24 +143,24 @@ export function CourseContentAccordion({
                         className="py-3 flex items-center justify-between gap-3 text-sm"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-200/60 text-neutral-600">
-                            <Play className="h-3 w-3 fill-neutral-600 text-neutral-600 ml-0.5" />
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-200/60 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                            <Play className="h-3 w-3 fill-neutral-600 dark:fill-neutral-400 text-neutral-600 dark:text-neutral-400 ml-0.5" />
                           </div>
                           <Link
                             href={lessonHref}
-                            className="font-medium text-neutral-800 hover:text-primary-600 transition-colors truncate"
+                            className="font-medium text-neutral-800 dark:text-neutral-200 hover:text-primary-600 dark:hover:text-primary-400 transition-colors truncate"
                           >
                             {lesson.title}
                           </Link>
                           {lesson.freePreview && (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/80 shrink-0">
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/60 shrink-0">
                               <Sparkles className="h-2.5 w-2.5" />
                               Free preview
                             </span>
                           )}
                         </div>
 
-                        <span className="text-xs text-neutral-400 shrink-0 font-mono">
+                        <span className="text-xs text-neutral-400 dark:text-neutral-500 shrink-0 font-mono">
                           {formatDuration(lesson.duration || 300)}
                         </span>
                       </div>
@@ -179,15 +179,15 @@ export function CourseContentAccordion({
           <button
             type="button"
             onClick={() => setShowAll((prev) => !prev)}
-            className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 bg-white px-6 py-2.5 text-sm font-medium text-neutral-700 shadow-2xs hover:bg-neutral-50 hover:border-neutral-300 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 px-5 py-2.5 text-sm font-medium text-neutral-700 dark:text-neutral-200 hover:bg-neutral-50 dark:hover:bg-neutral-700 cursor-pointer shadow-2xs transition-colors"
           >
             <span>
               {showAll
                 ? "Show less modules"
-                : `Show all ${totalModulesCount} modules`}
+                : `Show all ${modules.length} modules`}
             </span>
             <ChevronDown
-              className={`h-4 w-4 text-neutral-500 transition-transform duration-200 ${
+              className={`h-4 w-4 transition-transform duration-200 ${
                 showAll ? "rotate-180" : ""
               }`}
             />

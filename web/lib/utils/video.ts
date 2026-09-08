@@ -50,10 +50,11 @@ export function parseVideoUrl(url?: string, startSeconds: number = 0): ParsedVid
   // Matches: https://iframe.mediadelivery.net/embed/LIBRARY_ID/VIDEO_ID
   const bunnyMatch = url.match(/iframe\.mediadelivery\.net\/embed\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)/i);
   if (bunnyMatch && bunnyMatch[1] && bunnyMatch[2]) {
+    const timeParam = startSeconds > 0 ? `?t=${Math.floor(startSeconds)}` : "";
     return {
       provider: "bunny",
       id: bunnyMatch[2],
-      embedUrl: url,
+      embedUrl: `https://iframe.mediadelivery.net/embed/${bunnyMatch[1]}/${bunnyMatch[2]}${timeParam}`,
     };
   }
 

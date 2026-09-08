@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Loader2, X, TrendingUp, BookOpen, ArrowRight, CornerDownLeft } from "lucide-react";
+import posthog from "posthog-js";
 
 interface CourseSuggestion {
   title: string;
@@ -113,11 +114,23 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
   ];
 
   const handleSelectKeyword = (keyword: string) => {
+    posthog.capture("search_suggestion_selected", {
+      suggestion_type: "keyword",
+      value: keyword,
+      query: query.trim(),
+      source: "search_modal",
+    });
     onClose();
     router.push(`/search?q=${encodeURIComponent(keyword)}`);
   };
 
   const handleSelectCourse = (slug: string) => {
+    posthog.capture("search_suggestion_selected", {
+      suggestion_type: "course",
+      course_slug: slug,
+      query: query.trim(),
+      source: "search_modal",
+    });
     onClose();
     router.push(`/courses/${slug}`);
   };
@@ -132,6 +145,11 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
         handleSelectCourse(selected.value.slug);
       }
     } else if (query.trim()) {
+      posthog.capture("search_submitted", {
+        query: query.trim(),
+        query_length: query.trim().length,
+        source: "search_modal",
+      });
       onClose();
       router.push(`/search?q=${encodeURIComponent(query.trim())}`);
     }
@@ -218,6 +236,10 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                   <button
                     key={idx}
                     type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelectKeyword(item);
+                    }}
                     onClick={() => handleSelectKeyword(item)}
                     className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200/80 bg-neutral-50 px-3.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors hover:border-primary-300 hover:bg-primary-50 hover:text-primary-600 cursor-pointer"
                   >
@@ -243,6 +265,10 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                       return (
                         <li
                           key={idx}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectKeyword(kw);
+                          }}
                           onClick={() => handleSelectKeyword(kw)}
                           className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-sm cursor-pointer transition-colors ${
                             isSelected
@@ -277,6 +303,10 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                       return (
                         <li
                           key={course.slug || idx}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectCourse(course.slug);
+                          }}
                           onClick={() => handleSelectCourse(course.slug)}
                           className={`flex items-center justify-between rounded-xl p-3 text-sm cursor-pointer border transition-all ${
                             isSelected

@@ -18,6 +18,8 @@ const inter = Inter({
   display: "swap",
 });
 
+import { ThemeProvider } from "@/components/theme/theme-provider";
+
 export const metadata: Metadata = {
   title: "Vertex — AI-Powered Learning Platform",
   description:
@@ -26,14 +28,36 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <ClerkProvider>
+    <ClerkProvider appearance={{ variables: { colorPrimary: "#E05A36" } }}>
       <html
         lang="en"
         className={`${playfair.variable} ${inter.variable} h-full antialiased`}
+        suppressHydrationWarning
       >
-        <body className="min-h-full flex flex-col" suppressHydrationWarning>
-          <PostHogIdentity />
-          {children}
+        <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                try {
+                  var saved = localStorage.getItem('vertex-theme');
+                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  if (saved === 'dark' || (saved === 'system' && prefersDark)) {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.style.colorScheme = 'dark';
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.style.colorScheme = 'light';
+                  }
+                } catch (e) {}
+              `,
+            }}
+          />
+        </head>
+        <body className="min-h-full flex flex-col bg-white dark:bg-[#090D16] text-neutral-900 dark:text-neutral-100 transition-colors duration-200" suppressHydrationWarning>
+          <ThemeProvider>
+            <PostHogIdentity />
+            {children}
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

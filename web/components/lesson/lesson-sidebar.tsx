@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { formatDuration } from "@/lib/utils/format";
 import { type CurriculumCourse } from "@/lib/utils/curriculum";
+import posthog from "posthog-js";
 
 interface LessonSidebarProps {
   course: CurriculumCourse;
@@ -35,7 +36,7 @@ export function LessonSidebar({
   const totalModules = modules.length;
 
   return (
-    <aside className="w-full lg:w-80 xl:w-96 shrink-0 border-r border-neutral-200/80 bg-white p-6 flex flex-col justify-between">
+    <aside className="w-full lg:w-80 xl:w-96 shrink-0 border-r border-neutral-200/80 dark:border-neutral-800/80 bg-white dark:bg-[#0B1120] p-6 flex flex-col justify-between lg:self-start lg:sticky lg:top-20 lg:h-[calc(100vh-5rem)] lg:overflow-y-auto lg:overscroll-contain z-20">
       <div>
         {/* Back to course link */}
         <Link
@@ -47,26 +48,26 @@ export function LessonSidebar({
         </Link>
 
         {/* Course card info */}
-        <div className="flex items-center gap-3.5 pb-6 border-b border-neutral-100">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black text-white font-bold text-base shadow-xs">
+        <div className="flex items-center gap-3.5 pb-6 border-b border-neutral-100 dark:border-neutral-800/60">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-black dark:bg-white dark:text-black text-white font-bold text-base shadow-xs">
             N
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-sans font-bold text-sm text-neutral-900 leading-snug truncate">
+            <h2 className="font-sans font-bold text-sm text-neutral-900 dark:text-neutral-100 leading-snug truncate">
               {course.title || "Next.js for Production"}
             </h2>
-            <span className="text-xs text-neutral-500 font-medium block mt-0.5">
+            <span className="text-xs text-neutral-500 dark:text-neutral-400 font-medium block mt-0.5">
               35% complete
             </span>
           </div>
         </div>
 
         {/* Curriculum module counter */}
-        <div className="flex items-center justify-between py-4 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+        <div className="flex items-center justify-between py-4 text-xs font-semibold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
           <span>
             Module {activeModuleIndex + 1} of {totalModules || 12}
           </span>
-          <ChevronDown className="h-4 w-4 text-neutral-400" />
+          <ChevronDown className="h-4 w-4 text-neutral-400 dark:text-neutral-500" />
         </div>
 
         {/* Module list */}
@@ -87,8 +88,8 @@ export function LessonSidebar({
                 key={mIdx}
                 className={`rounded-xl transition-colors ${
                   isActiveModule
-                    ? "bg-[#FFF9F6] border border-[#FFEDD5]"
-                    : "border border-transparent hover:bg-neutral-50/70"
+                    ? "bg-[#FFF9F6] dark:bg-[#E05A36]/10 border border-[#FFEDD5] dark:border-[#E05A36]/30"
+                    : "border border-transparent hover:bg-neutral-50/70 dark:hover:bg-neutral-800/50"
                 }`}
               >
                 {/* Module row trigger */}
@@ -104,7 +105,7 @@ export function LessonSidebar({
                       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors ${
                         isActiveModule
                           ? "bg-[#E05A36] text-white shadow-2xs"
-                          : "border border-neutral-200 bg-neutral-50 text-neutral-700"
+                          : "border border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
                       }`}
                     >
                       {moduleNumber}
@@ -114,12 +115,12 @@ export function LessonSidebar({
                     <div className="min-w-0 flex-1">
                       <h3
                         className={`text-sm font-semibold truncate leading-tight ${
-                          isActiveModule ? "text-neutral-900" : "text-neutral-800"
+                          isActiveModule ? "text-neutral-900 dark:text-neutral-100" : "text-neutral-800 dark:text-neutral-300"
                         }`}
                       >
                         {module.title}
                       </h3>
-                      <span className="text-[11px] text-neutral-400 block mt-0.5">
+                      <span className="text-[11px] text-neutral-400 dark:text-neutral-500 block mt-0.5">
                         {modDurationText}
                       </span>
                     </div>
@@ -131,7 +132,7 @@ export function LessonSidebar({
                       <CheckCircle2 className="h-4 w-4 text-[#E05A36]" />
                     ) : (
                       <ChevronDown
-                        className={`h-4 w-4 text-neutral-400 transition-transform duration-200 ${
+                        className={`h-4 w-4 text-neutral-400 dark:text-neutral-500 transition-transform duration-200 ${
                           isExpanded ? "rotate-180" : ""
                         }`}
                       />
@@ -141,11 +142,11 @@ export function LessonSidebar({
 
                 {/* Lessons list inside expanded module */}
                 {isExpanded && module.lessons && module.lessons.length > 0 && (
-                  <div className="pb-3 pt-1 px-3 space-y-1.5 pl-9 border-t border-neutral-100/60">
+                  <div className="pb-3 pt-1 px-3 space-y-1.5 pl-9 border-t border-neutral-100/60 dark:border-neutral-800/60">
                     {module.lessons.map((lesson) => {
                       const lessonSlug =
-                        typeof lesson.slug === "object"
-                          ? (lesson.slug as any)?.current
+                        typeof lesson.slug === "object" && lesson.slug !== null
+                          ? (lesson.slug as { current?: string })?.current || ""
                           : lesson.slug;
                       const isCurrentLesson = lessonSlug === currentLessonSlug;
 
@@ -153,10 +154,20 @@ export function LessonSidebar({
                         <Link
                           key={lessonSlug}
                           href={`/lessons/${lessonSlug}`}
+                          onClick={() => {
+                            if (!isCurrentLesson) {
+                              posthog.capture("lesson_navigated", {
+                                direction: "sidebar_select",
+                                target_lesson_slug: lessonSlug,
+                                target_lesson_title: lesson.title,
+                                course_slug: course.slug || "",
+                              });
+                            }
+                          }}
                           className={`flex items-center justify-between gap-2.5 p-2 rounded-lg text-xs transition-colors cursor-pointer ${
                             isCurrentLesson
-                              ? "bg-white shadow-xs font-semibold text-neutral-900 border border-[#FED7AA]"
-                              : "text-neutral-600 hover:text-neutral-900 hover:bg-white/60"
+                              ? "bg-white dark:bg-neutral-900 shadow-xs font-semibold text-neutral-900 dark:text-neutral-100 border border-[#FED7AA] dark:border-[#E05A36]/40"
+                              : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-white/60 dark:hover:bg-neutral-800/60"
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
@@ -165,7 +176,7 @@ export function LessonSidebar({
                               className={`h-2 w-2 rounded-full shrink-0 ${
                                 isCurrentLesson
                                   ? "bg-[#E05A36]"
-                                  : "border border-neutral-300 bg-transparent"
+                                  : "border border-neutral-300 dark:border-neutral-600 bg-transparent"
                               }`}
                             />
                             <div className="min-w-0 truncate">
@@ -178,7 +189,7 @@ export function LessonSidebar({
                             </div>
                           </div>
 
-                          <div className="shrink-0 flex items-center gap-1.5 text-neutral-400">
+                          <div className="shrink-0 flex items-center gap-1.5 text-neutral-400 dark:text-neutral-500">
                             {isCurrentLesson ? (
                               <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#E05A36] text-white">
                                 <Play className="h-2.5 w-2.5 fill-white text-white ml-0.2" />

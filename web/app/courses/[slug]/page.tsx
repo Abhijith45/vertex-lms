@@ -2,6 +2,7 @@ import React from "react";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/layout/navbar";
 import { CourseHero } from "@/components/course/course-hero";
+import { CourseViewTracker } from "@/components/course/course-view-tracker";
 import { WhatYoullLearn } from "@/components/course/what-youll-learn";
 import { CourseContentAccordion, type ModuleItem } from "@/components/course/course-content-accordion";
 import { StickyCourseProgress } from "@/components/course/sticky-course-progress";
@@ -218,15 +219,21 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
     : "#";
 
   return (
-    <div className="min-h-screen w-full bg-[#FAF9F6] font-sans text-neutral-900 selection:bg-primary-100 selection:text-primary-500 relative">
+    <div className="min-h-screen w-full bg-[#FAF9F6] dark:bg-[#090D16] font-sans text-neutral-900 dark:text-neutral-100 selection:bg-primary-100 selection:text-primary-500 relative transition-colors duration-200">
       {/* Centered Canvas with 1440px max viewport width matching home & design */}
-      <div className="mx-auto min-h-screen max-w-[1440px] bg-white shadow-xs flex flex-col justify-between relative">
+      <div className="mx-auto min-h-screen max-w-[1440px] bg-white dark:bg-[#0F172A] border-x border-neutral-200/50 dark:border-neutral-800/80 shadow-xs flex flex-col justify-between relative transition-colors duration-200">
         <div>
           {/* Header / Navbar */}
           <Navbar activePath="/courses" />
 
           {/* Main Course Content Container */}
           <main className="px-6 sm:px-12 lg:px-16 pt-8 pb-32 max-w-6xl mx-auto w-full">
+            <CourseViewTracker
+              courseSlug={course.slug}
+              courseTitle={course.title}
+              modulesCount={totalModulesCount}
+              level={course.level}
+            />
             {/* Hero Section */}
             <CourseHero
               course={{
@@ -265,6 +272,7 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
       <StickyCourseProgress
         progressPercentage={35}
         continueLearningUrl={continueLearningUrl}
+        courseSlug={course.slug}
       />
     </div>
   );

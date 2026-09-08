@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Loader2, BookOpen, ArrowRight, X } from "lucide-react";
+import posthog from "posthog-js";
 
 interface CourseSuggestion {
   title: string;
@@ -111,6 +112,12 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
   };
 
   const handleSelectKeyword = (selectedText: string) => {
+    posthog.capture("search_suggestion_selected", {
+      suggestion_type: "keyword",
+      value: selectedText,
+      query: query.trim(),
+      source: "search_input",
+    });
     setQuery(selectedText);
     setIsOpen(false);
     setIsFocused(false);
@@ -119,6 +126,12 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
   };
 
   const handleSelectCourse = (slug: string) => {
+    posthog.capture("search_suggestion_selected", {
+      suggestion_type: "course",
+      course_slug: slug,
+      query: query.trim(),
+      source: "search_input",
+    });
     setIsOpen(false);
     setIsFocused(false);
     inputRef.current?.blur();
@@ -138,6 +151,11 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
         handleSelectCourse(selected.value.slug);
       }
     } else if (query.trim()) {
+      posthog.capture("search_submitted", {
+        query: query.trim(),
+        query_length: query.trim().length,
+        source: "search_input",
+      });
       router.push(`/search?q=${encodeURIComponent(query.trim())}`);
     }
   };
@@ -185,7 +203,7 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
           }}
           onKeyDown={handleKeyDown}
           placeholder="Search for concepts, courses, or specific moments..."
-          className="w-full rounded-full border border-gray-300 bg-white py-2.5 pl-5 pr-20 text-sm text-gray-900 shadow-xs focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+          className="w-full rounded-full border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-2.5 pl-5 pr-20 text-sm text-gray-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 shadow-xs focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all"
         />
         
         {/* Actions container: Clear 'X' button + Submit search button */}
@@ -195,7 +213,7 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
               type="button"
               onClick={handleClear}
               aria-label="Clear search query"
-              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors cursor-pointer"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 dark:text-neutral-400 hover:bg-gray-100 dark:hover:bg-neutral-800 hover:text-gray-600 dark:hover:text-neutral-200 transition-colors cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>
@@ -203,10 +221,10 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
           <button
             type="submit"
             aria-label="Search"
-            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 hover:text-gray-600 cursor-pointer transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-400 dark:text-neutral-400 hover:text-gray-600 dark:hover:text-neutral-200 cursor-pointer transition-colors"
           >
             {isLoading ? (
-              <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
+              <Loader2 className="h-4 w-4 animate-spin text-primary-500" />
             ) : (
               <Search className="h-4 w-4" />
             )}
@@ -216,29 +234,33 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
 
       {/* Autocomplete Suggestions Dropdown */}
       {isOpen && (keywords.length > 0 || courses.length > 0) && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
+        <div className="absolute left-0 right-0 top-full z-50 mt-2 max-h-[70vh] overflow-y-auto rounded-2xl border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-2 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
           {/* Keywords Section */}
           {keywords.length > 0 && (
             <div>
-              <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+              <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-neutral-500">
                 Suggested Keywords
               </div>
               <ul className="space-y-0.5">
                 {keywords.map((kw, idx) => (
                   <li
                     key={idx}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelectKeyword(kw);
+                    }}
                     onClick={() => handleSelectKeyword(kw)}
                     className={`flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors ${
                       idx === selectedIndex
-                        ? "bg-blue-50 font-medium text-blue-700"
-                        : "text-gray-700 hover:bg-gray-50"
+                        ? "bg-primary-50 dark:bg-primary-950/40 font-medium text-primary-700 dark:text-primary-300"
+                        : "text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800/60"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <Search className="h-3.5 w-3.5 text-gray-400" />
+                      <Search className="h-3.5 w-3.5 text-gray-400 dark:text-neutral-500" />
                       <span>{kw}</span>
                     </div>
-                    <span className="text-[11px] text-gray-400">Search</span>
+                    <span className="text-[11px] text-gray-400 dark:text-neutral-500">Search</span>
                   </li>
                 ))}
               </ul>
@@ -247,8 +269,8 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
 
           {/* Courses Section */}
           {courses.length > 0 && (
-            <div className={keywords.length > 0 ? "mt-2 border-t border-gray-100 pt-2" : ""}>
-              <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+            <div className={keywords.length > 0 ? "mt-2 border-t border-gray-100 dark:border-neutral-800 pt-2" : ""}>
+              <div className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-neutral-500">
                 Courses
               </div>
               <ul className="space-y-1">
@@ -258,25 +280,29 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
                   return (
                     <li
                       key={course.slug || idx}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectCourse(course.slug);
+                      }}
                       onClick={() => handleSelectCourse(course.slug)}
                       className={`flex cursor-pointer items-center justify-between rounded-xl p-2.5 text-sm transition-all border ${
                         isSelected
-                          ? "border-blue-300 bg-blue-50/50"
-                          : "border-transparent hover:border-gray-200 hover:bg-gray-50"
+                          ? "border-primary-300 dark:border-primary-700 bg-primary-50/50 dark:bg-primary-950/30"
+                          : "border-transparent hover:border-gray-200 dark:hover:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800/60"
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-300">
                           <BookOpen className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="font-semibold text-gray-900 leading-tight">
+                          <p className="font-semibold text-gray-900 dark:text-neutral-100 leading-tight">
                             {course.title}
                           </p>
-                          <p className="text-[11px] text-gray-500">{course.category}</p>
+                          <p className="text-[11px] text-gray-500 dark:text-neutral-400">{course.category}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-blue-600 font-medium">
+                      <div className="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 font-medium">
                         <span>View</span>
                         <ArrowRight className="h-3.5 w-3.5" />
                       </div>
