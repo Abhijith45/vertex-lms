@@ -67,9 +67,9 @@ export default async function HomePage() {
   ];
 
   // Select 3 featured courses for the home page (prioritize Next.js, Docker, TypeScript if available)
-  const isFallback = !courses || courses.length === 0;
+  const hasCourses = !!courses && courses.length > 0;
   const displayCourses =
-    !isFallback
+    hasCourses
       ? courses.slice(0, 3).map((c) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const totalSeconds =
@@ -161,7 +161,7 @@ export default async function HomePage() {
               {displayCourses.map((c, idx) => (
                 <HomeCourseCard
                   key={c.slug || idx}
-                  href={isFallback ? undefined : `/courses/${c.slug}`}
+                  href={hasCourses ? `/courses/${c.slug}` : undefined}
                   icon={<CourseIcon slug={c.slug} title={c.title} />}
                   title={c.title}
                   description={c.summary}
