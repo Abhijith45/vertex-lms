@@ -15,3 +15,14 @@ export function getPostHogClient(): PostHog {
   }
   return posthogClient;
 }
+
+export async function captureServerException(
+  error: unknown,
+  properties: Record<string, unknown>
+): Promise<void> {
+  try {
+    await getPostHogClient().captureExceptionImmediate(error, undefined, properties);
+  } catch (captureError) {
+    console.error("Failed to report exception to PostHog:", captureError);
+  }
+}

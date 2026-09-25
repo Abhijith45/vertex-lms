@@ -11,6 +11,7 @@ import { ExploreCoursesButton } from "@/components/home/explore-courses-button";
 import { sanityFetch } from "@/sanity/lib/client";
 import { getCoursesQuery } from "@/sanity/lib/queries";
 import { formatDuration } from "@/lib/utils/format";
+import { captureServerException } from "@/lib/posthog-server";
 
 export default async function HomePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -21,11 +22,17 @@ export default async function HomePage() {
       tags: ["courses"],
       revalidate: 300,
     });
+    if (!courses || courses.length === 0) {
+      await captureServerException(new Error("Sanity returned no courses for the home page"), {
+        source: "home_page",
+      });
+    }
   } catch (error) {
     console.error("Error fetching courses for home page:", error);
+    await captureServerException(error, { source: "home_page" });
   }
 
-  // Fallback courses if Sanity fetch fails or is empty
+  // Fallback courses if Sanity fetch fails or is empty. They have no course page, so they render without a link.
   const fallbackCourses = [
     {
       title: "Next.js for Production",
@@ -60,8 +67,9 @@ export default async function HomePage() {
   ];
 
   // Select 3 featured courses for the home page (prioritize Next.js, Docker, TypeScript if available)
+  const isFallback = !courses || courses.length === 0;
   const displayCourses =
-    courses && courses.length > 0
+    !isFallback
       ? courses.slice(0, 3).map((c) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const totalSeconds =
@@ -153,7 +161,7 @@ export default async function HomePage() {
               {displayCourses.map((c, idx) => (
                 <HomeCourseCard
                   key={c.slug || idx}
-                  href={`/courses/${c.slug}`}
+                  href={isFallback ? undefined : `/courses/${c.slug}`}
                   icon={<CourseIcon slug={c.slug} title={c.title} />}
                   title={c.title}
                   description={c.summary}
