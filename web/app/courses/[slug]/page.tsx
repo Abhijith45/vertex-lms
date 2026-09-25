@@ -12,6 +12,8 @@ import { Footer } from "@/components/layout/footer";
 import { sanityFetch } from "@/sanity/lib/client";
 import { getCourseBySlugQuery } from "@/sanity/lib/queries";
 import { formatDuration } from "@/lib/utils/format";
+import { loadFirstCourse } from "@/lib/utils/course-load";
+import { captureServerException } from "@/lib/posthog-server";
 
 interface CoursePageProps {
   params: Promise<{ slug: string }>;
@@ -154,32 +156,24 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
   const isDesignMockSlug = slug === "nextjs-for-production";
   const resolvedSlug = isDesignMockSlug ? "nextjs-app-router-in-depth" : slug;
 
-  // Fetch course data from Sanity with ISR caching
+  // Fetch course data from Sanity with ISR caching. A failed fetch goes to error.tsx, not the 404 page.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let course: any = null;
   try {
-    course = await sanityFetch({
-      query: getCourseBySlugQuery,
-      params: { slug: resolvedSlug },
-      tags: ["courses", `course-${resolvedSlug}`],
-      revalidate: 300,
-    });
+    course = await loadFirstCourse(
+      resolvedSlug !== slug ? [resolvedSlug, slug] : [slug],
+      (courseSlug) =>
+        sanityFetch({
+          query: getCourseBySlugQuery,
+          params: { slug: courseSlug },
+          tags: ["courses", `course-${courseSlug}`],
+          revalidate: 300,
+        })
+    );
   } catch (error) {
     console.error("Error fetching course from Sanity:", error);
-  }
-
-  // Fallback if not found by resolvedSlug
-  if (!course && resolvedSlug !== slug) {
-    try {
-      course = await sanityFetch({
-        query: getCourseBySlugQuery,
-        params: { slug },
-        tags: ["courses", `course-${slug}`],
-        revalidate: 300,
-      });
-    } catch (e) {
-      console.error("Fallback fetch error:", e);
-    }
+    await captureServerException(error, { source: "course_detail_page", course_slug: slug });
+    throw error;
   }
 
   if (!course) {

@@ -19,7 +19,7 @@ export interface HomeCourseCardProps {
 }
 
 export function HomeCourseCard({
-  href = "#",
+  href,
   icon,
   title,
   description,
@@ -41,12 +41,11 @@ export function HomeCourseCard({
     });
   }
 
-  return (
-    <Link
-      href={href}
-      onClick={handleClick}
-      className="group flex flex-col justify-between rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 p-6 sm:p-7 shadow-xs transition-all duration-200 hover:-translate-y-1 hover:border-primary-300 dark:hover:border-primary-600/70 hover:shadow-md cursor-pointer relative"
-    >
+  const cardClassName =
+    "group flex flex-col justify-between rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 p-6 sm:p-7 shadow-xs transition-all duration-200 relative";
+
+  const content = (
+    <>
       <div>
         <div className="mb-5 flex items-center justify-between">
           <div className="transition-transform duration-200 group-hover:scale-105">{icon}</div>
@@ -109,6 +108,20 @@ export function HomeCourseCard({
           </div>
         )}
       </div>
+    </>
+  );
+
+  if (!href) {
+    return <div className={cardClassName}>{content}</div>;
+  }
+
+  return (
+    <Link
+      href={href}
+      onClick={handleClick}
+      className={`${cardClassName} hover:-translate-y-1 hover:border-primary-300 dark:hover:border-primary-600/70 hover:shadow-md cursor-pointer`}
+    >
+      {content}
     </Link>
   );
 }
