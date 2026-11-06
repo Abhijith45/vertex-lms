@@ -1,16 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
-import { useSignIn } from "@clerk/nextjs";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth, useClerk, useSignIn } from "@clerk/nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import posthog from "posthog-js";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
 import { OtpInput } from "./otp-input";
 import { SocialAuthButtons } from "./social-auth-buttons";
 import { sanitizeRedirectUrl } from "@/lib/utils/url";
+import { isSessionExistsError } from "@/lib/utils/sign-in";
 
 export function CustomSignInForm() {
   const { signIn, errors, fetchStatus } = useSignIn();
+  const { isSignedIn } = useAuth();
+  const clerk = useClerk();
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawParam = searchParams.get("redirect_url");
@@ -37,26 +41,47 @@ export function CustomSignInForm() {
   const [showOtpView, setShowOtpView] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const hasRedirectedRef = useRef(false);
+  const isVerifyingRef = useRef(false);
 
-  // Helper to finalize session
-  const completeSession = async () => {
+  const redirectTo = useCallback(
+    (destination: string) => {
+      if (hasRedirectedRef.current) return;
+      hasRedirectedRef.current = true;
+      if (destination.startsWith("http")) {
+        window.location.href = destination;
+      } else {
+        router.replace(destination);
+      }
+    },
+    [router]
+  );
+
+  // A signed-in user has nothing to do on this form
+  useEffect(() => {
+    if (isSignedIn) redirectTo(redirectUrl);
+  }, [isSignedIn, redirectUrl, redirectTo]);
+
+  // Helper to finalize session. Returns false if the user is still signed out.
+  const completeSession = async (): Promise<boolean> => {
     try {
       await signIn.finalize({
         navigate: ({ session, decorateUrl }) => {
           if (session?.currentTask) {
             console.log("Pending session task:", session.currentTask);
           }
-          const destination = decorateUrl(redirectUrl);
-          if (destination.startsWith("http")) {
-            window.location.href = destination;
-          } else {
-            router.push(destination);
-          }
+          redirectTo(decorateUrl(redirectUrl));
         },
       });
+      return true;
     } catch (err: unknown) {
+      if (clerk.isSignedIn) {
+        redirectTo(redirectUrl);
+        return true;
+      }
       const e = err as { message?: string };
       setFormError(e?.message || "Failed to finalize session.");
+      return false;
     }
   };
 
@@ -79,7 +104,9 @@ export function CustomSignInForm() {
         }
 
         if (signIn.status === "complete") {
-          await completeSession();
+          if (await completeSession()) {
+            posthog.capture("sign_in_completed", { method: "password" });
+          }
         } else if (
           signIn.status === "needs_second_factor" ||
           signIn.status === "needs_client_trust"
@@ -109,39 +136,66 @@ export function CustomSignInForm() {
     }
   };
 
-  // Verify OTP code
+  // Verify OTP code. The OTP input auto-submits on the sixth digit, so the button click can race it.
+  // isVerifyingRef blocks a second verify, and stays set once the user is signed in.
   const handleOtpVerify = async (codeToVerify?: string) => {
     const code = codeToVerify || otpCode;
-    if (code.length < 6) return;
+    if (code.length < 6 || isVerifyingRef.current) return;
+    isVerifyingRef.current = true;
     setFormError(null);
     setIsSubmitting(true);
 
+    const method =
+      signIn.status === "needs_second_factor" || signIn.status === "needs_client_trust"
+        ? "second_factor"
+        : "email_code";
+    let signedIn = false;
+    const continueWithExistingSession = () => {
+      signedIn = true;
+      posthog.capture("sign_in_completed", { method, completion: "session_exists" });
+      redirectTo(redirectUrl);
+    };
+
     try {
-      if (
-        signIn.status === "needs_second_factor" ||
-        signIn.status === "needs_client_trust"
-      ) {
-        const { error } = await signIn.mfa.verifyEmailCode({ code });
-        if (error) {
+      const { error } =
+        method === "second_factor"
+          ? await signIn.mfa.verifyEmailCode({ code })
+          : await signIn.emailCode.verifyCode({ code });
+
+      if (error) {
+        if (isSessionExistsError(error)) {
+          continueWithExistingSession();
+        } else {
           setFormError(error.message || "Invalid verification code.");
-          return;
         }
-      } else {
-        const { error } = await signIn.emailCode.verifyCode({ code });
-        if (error) {
-          setFormError(error.message || "Invalid verification code.");
-          return;
-        }
+        return;
       }
 
-      if (signIn.status === "complete") {
-        await completeSession();
+      // The `signIn` captured by this closure can be stale after the await,
+      // so also read the live sign-in and session from the Clerk instance.
+      if (signIn.status === "complete" || clerk.client?.signIn.status === "complete") {
+        signedIn = await completeSession();
+        if (signedIn) {
+          posthog.capture("sign_in_completed", { method, completion: "finalized" });
+        }
+      } else if (clerk.isSignedIn) {
+        signedIn = true;
+        posthog.capture("sign_in_completed", { method, completion: "session_active" });
+        redirectTo(redirectUrl);
       }
     } catch (err: unknown) {
+      if (isSessionExistsError(err)) {
+        continueWithExistingSession();
+        return;
+      }
       const e = err as { message?: string };
       setFormError(e?.message || "Failed to verify code. Please check and try again.");
     } finally {
-      setIsSubmitting(false);
+      // Keep the form locked with its spinner until the redirect completes
+      if (!signedIn) {
+        isVerifyingRef.current = false;
+        setIsSubmitting(false);
+      }
     }
   };
 
