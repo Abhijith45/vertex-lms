@@ -25,41 +25,7 @@ export default async function HomePage() {
     console.error("Error fetching courses for home page:", error);
   }
 
-  // Fallback courses if Sanity fetch fails or is empty
-  const fallbackCourses = [
-    {
-      title: "Next.js for Production",
-      slug: "nextjs-app-router-in-depth",
-      summary: "Build scalable, high-performance web applications with Next.js.",
-      level: "Intermediate",
-      duration: "18h 24m",
-      modulesCount: 12,
-      popular: true,
-      category: "Web Development",
-    },
-    {
-      title: "DevOps with Docker & Kubernetes",
-      slug: "devops-with-docker-and-kubernetes",
-      summary: "Containerize applications and streamline your development workflow.",
-      level: "Beginner",
-      duration: "10h 12m",
-      modulesCount: 8,
-      popular: false,
-      category: "Backend & Infrastructure",
-    },
-    {
-      title: "TypeScript for Application Developers",
-      slug: "typescript-for-application-developers",
-      summary: "Go beyond the basics and write safer, more expressive code.",
-      level: "Intermediate",
-      duration: "14h 36m",
-      modulesCount: 10,
-      popular: false,
-      category: "Languages",
-    },
-  ];
-
-  // Select 3 featured courses for the home page (prioritize Next.js, Docker, TypeScript if available)
+  // Select up to 3 featured courses for the home page strictly from Sanity
   const displayCourses =
     courses && courses.length > 0
       ? courses.slice(0, 3).map((c) => {
@@ -87,7 +53,7 @@ export default async function HomePage() {
             category: c.category?.title,
           };
         })
-      : fallbackCourses;
+      : [];
 
   return (
     <div className="min-h-screen w-full bg-[#FAF9F6] dark:bg-[#090D16] font-sans text-neutral-900 dark:text-neutral-100 selection:bg-primary-100 selection:text-primary-500 transition-colors duration-200">
@@ -149,22 +115,28 @@ export default async function HomePage() {
             </div>
 
             {/* Course Cards Grid */}
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              {displayCourses.map((c, idx) => (
-                <HomeCourseCard
-                  key={c.slug || idx}
-                  href={`/courses/${c.slug}`}
-                  icon={<CourseIcon slug={c.slug} title={c.title} />}
-                  title={c.title}
-                  description={c.summary}
-                  level={c.level}
-                  duration={c.duration}
-                  modules={c.modulesCount}
-                  category={c.category}
-                  popular={c.popular}
-                />
-              ))}
-            </div>
+            {displayCourses.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                {displayCourses.map((c, idx) => (
+                  <HomeCourseCard
+                    key={c.slug || idx}
+                    href={`/courses/${c.slug}`}
+                    icon={<CourseIcon slug={c.slug} title={c.title} />}
+                    title={c.title}
+                    description={c.summary}
+                    level={c.level}
+                    duration={c.duration}
+                    modules={c.modulesCount}
+                    category={c.category}
+                    popular={c.popular}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-800 p-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
+                No courses currently available. Please check back soon or explore the full catalog.
+              </div>
+            )}
 
             {/* ──────────────────────────────────────────────────────────
                WEEKLY UPDATES DIVIDER

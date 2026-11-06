@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
+import Script from "next/script";
 import { ClerkProvider } from "@clerk/nextjs";
 import { PostHogIdentity } from "@/components/analytics/posthog-identity";
 import "./globals.css";
@@ -35,7 +36,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         suppressHydrationWarning
       >
         <head>
-          <script
+          <Script
+            id="vertex-theme-init"
+            strategy="beforeInteractive"
             dangerouslySetInnerHTML={{
               __html: `
                 try {

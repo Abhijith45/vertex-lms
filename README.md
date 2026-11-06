@@ -1,34 +1,207 @@
 # Vertex — AI-Powered Learning Platform
 
-> A production-grade, AI-powered learning platform featuring intelligent plain-language video search, second-level timestamp deep-linking, structured engineering curriculum, learner progress tracking, and an enterprise compliance suite.
+<div align="center">
+
+![Vertex Banner](https://raw.githubusercontent.com/Abhijith45/vertex-lms/main/web/public/og-image.png)
+
+[![Next.js](https://img.shields.io/badge/Next.js-16.3.3%20App%20Router-black?logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-Strict%20Mode-blue?logo=typescript)](https://www.typescriptlang.org/)
+[![Sanity Studio](https://img.shields.io/badge/Sanity-Studio%20v5-F03E2F?logo=sanity)](https://www.sanity.io/)
+[![Clerk](https://img.shields.io/badge/Clerk-Custom%20Auth-6C47FF?logo=clerk)](https://clerk.com/)
+[![Stripe](https://img.shields.io/badge/Stripe-SaaS%20Billing-008CDD?logo=stripe)](https://stripe.com/)
+[![PostHog](https://img.shields.io/badge/PostHog-Product%20Analytics-1D4ED8?logo=posthog)](https://posthog.com/)
+[![Tests](https://img.shields.io/badge/Tests-214%20Passing%20(77%20Suites)-success)](#-automated-testing--quality-benchmarks)
+[![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-Automated%20Vercel%20Delivery-brightgreen?logo=github-actions)](DEPLOYMENT.md)
+
+**A production-grade, AI-powered learning management platform featuring natural-language video search, temporal sliding-window AI copilot, interactive synchronized transcript playback, HMAC-SHA256 verifiable credentials, and enterprise SaaS monetization.**
+
+[Live Demo](https://vertex-lms.vercel.app) · [Resume & Portfolio Talking Points](PORTFOLIO_RESUME_GUIDE.md) · [CI/CD & Deployment Guide](DEPLOYMENT.md) · [System Architecture](#-system-architecture--diagrams) · [Legal & Compliance](#-full-legal-compliance--seo-suite)
+
+</div>
 
 ---
 
-## 🌟 Overview & Core Differentiators
+## 🌟 Executive Summary & Engineering Highlights
 
-Vertex is an intelligent, full-stack learning management system built with Next.js 16, Sanity Studio v5, Clerk authentication, PostHog analytics, and the Sanity Context MCP.
+Vertex is an intelligent learning management system built for developers and engineering teams. Rather than treating video lessons as static black boxes, Vertex indexes curricula at the second level, enabling learners to search conceptual queries in plain English and immediately jump to the exact second a topic is explained.
 
-### Key Capabilities:
-* **Natural Language Video Search:** A learner enters a conceptual query (e.g. *"how does useMemo prevent child re-renders"* or *"docker multi-stage build caching"*) and receives ranked, clickable cards.
-* **Two-Stage Timestamp Resolution:** Queries match clean, authored chapter markers first. If no chapter matches, the search engine falls back to timestamped transcript chunks for pinpoint precision.
-* **On-Site Seek Playback:** Cards deep-link straight to the exact second in the lesson's video where that concept is explained, using official third-party embed players (YouTube, Vimeo, Bunny) with zero video re-hosting.
-* **Learner State Tracking & Bookmarks:** Tracks completed lessons, resume playback positions, and course bookmarks per user via server-isolated private datastores.
-* **Complete Compliance Suite:** Out-of-the-box legal, accessibility (WCAG 2.1 AA), privacy (GDPR/CCPA), DMCA takedown, security notice, dynamic sitemap, and robots.txt infrastructure.
+Designed as a showcase of scalable full-stack engineering, Vertex demonstrates:
+* **Sub-Second Natural Language Video Search:** Grounded LLM function-calling pipeline resolving conceptual queries to video timestamps in two stages (authored chapters first, transcript chunks fallback).
+* **Interactive Media Engine:** Synchronized transcript streaming with auto-scroll seek sync, user-driven playback velocity, and timestamped markdown notes with jump-to-time anchors.
+* **Temporal AI Copilot (Sliding-Window RAG):** Context-aware lesson assistant extracting a rolling 90-second temporal transcript window, streaming AI responses with clickable `[MM:SS]` seek badges and interactive checkpoints.
+* **Cryptographic Social Proof:** Stateless completion certificates signed via HMAC-SHA256 digital signatures with public instant verification (`/verify/[id]`).
+* **SaaS Monetization & Access Entitlements:** Idempotent Stripe webhook pipeline with LRU deduplication, tier-gated course access, and dynamic Edge OpenGraph banner generation (`/api/og`).
+* **Comprehensive Automated Test Harness:** 214 automated unit and integration tests across 77 suites covering all core workflows with strict TypeScript type safety.
 
 ---
 
-## 🏗️ Monorepo Architecture
+## 🏗️ System Architecture & Diagrams
 
-Vertex is structured as two independent, standalone workspaces in a monorepo:
+Vertex is built on a clean, modular architecture separating authoring (Sanity Studio v5), edge delivery (Next.js 16 App Router), user security (Clerk), and telemetry (PostHog).
 
+### 1. Global High-Level System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Client ["Learner Web Client (Browser)"]
+        UI["Next.js App Router (React 19 Server/Client Components)"]
+        Player["Interactive Video Player (YouTube API / HTML5)"]
+        NotesState["Local & Cloud Timestamped Notes"]
+    end
+
+    subgraph EdgeLayer ["Edge & CDN Layer (Vercel)"]
+        EdgeMiddleware["Proxy / Route Middleware (Auth & Session Guards)"]
+        OGGen["Dynamic Edge OG Image Generator (/api/og)"]
+    end
+
+    subgraph AppRouter ["Next.js 16 Application Server (Node.js Runtime)"]
+        SearchAPI["/api/search (Hybrid Search Engine)"]
+        CopilotAPI["/api/ai/copilot (Streaming Temporal RAG)"]
+        CertAPI["/api/certificates/* (HMAC-SHA256 Signer & Verifier)"]
+        StripeWebhook["/api/webhooks/stripe (Idempotent Webhook Engine)"]
+        DiscussionAPI["/api/discussions (Timestamped Q&A Threads)"]
+        ProgressAPI["/api/progress & /api/bookmarks"]
+    end
+
+    subgraph ExternalServices ["External Platform Services"]
+        ClerkAuth["Clerk Identity Platform (Session & OTP Auth)"]
+        SanityCMS["Sanity Studio v5 (Content Datastore & Schema)"]
+        SanityMCP["Sanity Context MCP (AI Grounded Schema Server)"]
+        OpenAI["OpenAI GPT-4o (Function Calling & Synthesis)"]
+        StripeAPI["Stripe Billing & Checkout API"]
+        PostHog["PostHog Analytics (Client & Server Telemetry)"]
+    end
+
+    UI --> EdgeMiddleware
+    EdgeMiddleware --> AppRouter
+    UI --> OGGen
+    Player <--> UI
+    NotesState <--> ProgressAPI
+
+    SearchAPI --> SanityMCP
+    SearchAPI --> OpenAI
+    CopilotAPI --> OpenAI
+    CertAPI --> SanityCMS
+    ProgressAPI --> SanityCMS
+    DiscussionAPI --> SanityCMS
+    StripeWebhook --> StripeAPI
+    StripeWebhook --> SanityCMS
+    UI --> ClerkAuth
+    UI --> PostHog
+    AppRouter --> PostHog
 ```
-vertex/
-├── studio/     # Sanity Studio v5 — Content modeling, authoring UI & ingestion scripts
-├── web/        # Next.js 16 (App Router) — Learner-facing site, search API & UI
-└── prompts/    # Architecture decision records (ADRs) & implementation prompts
+
+---
+
+### 2. Two-Stage Natural Language Video Search Pipeline
+
+The search engine resolves plain English conceptual questions (e.g. *"how does useMemo prevent child re-renders"*) into ranked, clickable lesson cards linking straight to the exact second of playback.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Learner as Learner (Browser)
+    participant SearchAPI as /api/search (Route Handler)
+    participant Cache as In-Memory LRU Cache
+    participant Normalizer as Token & Synonym Normalizer
+    participant MCP as Sanity Context MCP
+    participant OpenAI as OpenAI GPT-4o
+    participant Resolver as Two-Stage Timestamp Resolver
+
+    Learner->>SearchAPI: GET /api/search?q="how to cache docker builds"
+    SearchAPI->>Cache: Check query cache
+    alt Cache Hit
+        Cache-->>SearchAPI: Cached Search Results JSON
+        SearchAPI-->>Learner: Render Result Cards (<15ms)
+    else Cache Miss
+        SearchAPI->>Normalizer: Cleanse punctuation & expand synonyms
+        Normalizer-->>SearchAPI: Normalized keywords
+        SearchAPI->>MCP: Query schema relationships & reverse references
+        MCP-->>SearchAPI: Grounded course/lesson/video context
+        SearchAPI->>OpenAI: Synthesize grounded query with tool calling
+        OpenAI-->>SearchAPI: Structured match candidates & raw timestamps
+        SearchAPI->>Resolver: Resolve candidate moments against video data
+        Note over Resolver: Stage 1 Priority: Authored chapter markers
+        alt Chapter marker matched
+            Resolver-->>SearchAPI: Use chapter start_seconds and label
+        else Fallback to Stage 2
+            Note over Resolver: Stage 2 Fallback: Nearest transcript chunk match
+            Resolver-->>SearchAPI: Use transcript chunk start_seconds
+        end
+        SearchAPI->>Cache: Store result in LRU cache (TTL: 5 min)
+        SearchAPI-->>Learner: Ranked Moment & Lesson Cards with [MM:SS] deep links
+    end
 ```
 
-Both workspaces maintain **independent package manifests (`package.json`), separate dev servers, and isolated deployment pipelines**. This separation preserves TypeGen type generation, Studio auto-updates, and server/client security boundaries.
+---
+
+### 3. Temporal Sliding-Window AI Copilot (RAG)
+
+During video playback, learners can ask the AI Copilot questions about what the instructor is actively explaining. The copilot pulls a dynamic **90-second temporal sliding window** around the current video timestamp.
+
+```mermaid
+flowchart LR
+    VideoCurrent["Video Playhead (e.g. 04:30)"] --> WindowExtractor["Sliding Window Filter (03:45 – 05:15)"]
+    WindowExtractor --> TemporalContext["Temporal Chunk Context (90s Window)"]
+    LessonNotes["Lesson Notes & Key Points"] --> PromptBuilder["Prompt Context Builder"]
+    TemporalContext --> PromptBuilder
+    LearnerQuestion["Learner Question"] --> PromptBuilder
+    PromptBuilder --> VercelAI["Vercel AI SDK (OpenAI Stream)"]
+    VercelAI --> MarkdownParser["Response Token Stream with [MM:SS] Badges"]
+    MarkdownParser --> InteractiveUI["Copilot Drawer (Click-to-Seek UI)"]
+```
+
+---
+
+### 4. Cryptographic Proof & HMAC-SHA256 Certificate Architecture
+
+Upon completing 100% of a course's curriculum, learners claim a verifiable certificate. Certificates are cryptographically signed using a server-side HMAC-SHA256 secret combined with a SHA-256 payload digest, allowing instant tamper verification without database lookups.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Learner as Learner (Browser)
+    participant CertClaim as /api/certificates/claim
+    participant CertLib as lib/certificates/signer
+    participant Verifier as Public Verification Route (/verify/[id])
+
+    Learner->>CertClaim: POST /api/certificates/claim (courseId, learnerName)
+    CertClaim->>CertClaim: Validate 100% completion & entitlements
+    CertClaim->>CertLib: generateCertificate(userId, courseId, learnerName)
+    Note over CertLib: 1. Generate unique Nonce & Issue Timestamp<br/>2. SHA-256 Digest of Core Payload<br/>3. HMAC-SHA256 Signature using Server Secret
+    CertLib-->>CertClaim: Signed Certificate Object (id, signature, issuedAt)
+    CertClaim-->>Learner: Certificate Payload + Download Link
+
+    Note over Verifier: Public Independent Verification
+    actor Employer as Recruiter / Employer
+    Employer->>Verifier: GET /verify/[certificateId]?sig=[signature]&hash=[hash]
+    Verifier->>CertLib: verifyCertificateSignature(payload, signature)
+    alt Signature Valid & Hash Matches
+        Verifier-->>Employer: 200 OK — "Verified Authentic Certificate" with issuance details
+    else Signature Tampered or Forged
+        Verifier-->>Employer: 400 Bad Request — "Verification Failed: Invalid Signature"
+    end
+```
+
+---
+
+### 5. SaaS Monetization & Stripe Webhook Idempotency
+
+Vertex handles subscription and one-off course purchases using Stripe Checkout and resilient, idempotent webhook processing.
+
+```mermaid
+flowchart TD
+    StripeEvent["Stripe Event (checkout.session.completed)"] --> WebhookHandler["/api/webhooks/stripe"]
+    WebhookHandler --> SigVerify{"Verify stripe-signature header"}
+    SigVerify -- "Invalid Signature" --> Reject400["400 Bad Request"]
+    SigVerify -- "Valid Signature" --> IdempotencyCheck{"Check Event ID in LRU Cache"}
+    IdempotencyCheck -- "Already Processed" --> Ack200["200 OK (Idempotent Ignore)"]
+    IdempotencyCheck -- "New Event" --> RecordIdempotency["Record Event ID in Cache"]
+    RecordIdempotency --> ExtractMetadata["Extract userId & courseId metadata"]
+    ExtractMetadata --> GrantAccess["Update User Entitlements in Datastore"]
+    GrantAccess --> DispatchPostHog["Capture 'course_purchased' telemetry in PostHog"]
+    DispatchPostHog --> Return200["200 OK Success"]
+```
 
 ---
 
@@ -36,224 +209,154 @@ Both workspaces maintain **independent package manifests (`package.json`), separ
 
 Vertex leverages best-in-class modern developer tools. Below is an exhaustive breakdown of why each tool was chosen, how it is implemented in Vertex, its free-tier quota limits, and viable alternatives:
 
-### 1. 🔐 Clerk (Authentication & User Identity)
-* **Purpose & Usage in Vertex:**
-  - Manages secure user registration, multi-factor login, and passwordless authentication.
-  - Controls route protection via Next.js middleware (`proxy.ts` / middleware).
-  - Supplies client components (`<ClerkProvider>`, `<SignInButton>`, `<SignUpButton>`, `<UserButton>`) styled with Vertex design tokens (`#E05A36`).
-  - Provides server-side `auth()` in API routes (`/api/progress`, `/api/bookmarks`) to key user progress documents to the authenticated `userId`.
-  - Triggers sign-in modals when guest learners attempt to save progress or bookmark courses.
-* **Free-Tier Limits:** Up to **10,000 Monthly Active Users (MAUs)** with unlimited sign-ins on the free development tier.
-* **Viable Alternatives:**
-  - **[NextAuth.js / Auth.js](https://authjs.dev/):** Free, open-source, self-hosted session management supporting OAuth and credentials.
-  - **[Supabase Auth](https://supabase.com/auth):** Built on PostgreSQL Row Level Security (RLS) with 50,000 free MAUs.
-  - **[Better-Auth](https://www.better-auth.com/) / [Lucia](https://lucia-auth.com/):** Lightweight, developer-controlled TypeScript authentication libraries.
-  - **[Firebase Auth](https://firebase.google.com/docs/auth):** Generous 50,000 MAU free tier backed by Google Cloud.
+| Tool | Architectural Role in Vertex | Free-Tier Quota & Limits | Viable Open-Source / Cloud Alternatives |
+|---|---|---|---|
+| **Clerk** | Custom OTP, OAuth (Google/GitHub), passwordless authentication, session cookies, route proxy guards | 10,000 Monthly Active Users (MAUs) | [NextAuth.js / Auth.js](https://authjs.dev/), [Supabase Auth](https://supabase.com/auth), [Lucia](https://lucia-auth.com/) |
+| **Sanity Studio v5** | Headless CMS for courses, modules, lessons, video transcripts, Context MCP endpoint | 20 users, 100k API calls/mo, 10GB assets | [Payload CMS](https://payloadcms.com/), [Strapi](https://strapi.io/), [Supabase PostgreSQL](https://supabase.com/) |
+| **OpenAI & Vercel AI SDK** | Natural language query understanding, function calling, temporal RAG streaming | Pay-per-token API pricing | [Anthropic Claude 3.5](https://anthropic.com/), [Groq Llama 3](https://groq.com/), [Ollama Local](https://ollama.ai/) |
+| **Stripe** | Checkout sessions, subscription tiers, idempotent webhooks, entitlement management | Standard processing fee per transaction | [Lemon Squeezy](https://www.lemonsqueezy.com/), [Paddle](https://www.paddle.com/), [Autumn](https://useautumn.com/) |
+| **PostHog** | Product event tracking, user identification, search latency monitoring, video milestones | 1,000,000 events/mo, 5,000 recordings/mo | [Mixpanel](https://mixpanel.com/), [Umami](https://umami.is/), [Plausible](https://plausible.io/) |
 
 ---
 
-### 2. 📝 Sanity Studio v5 (Headless CMS & Content Model)
-* **Purpose & Usage in Vertex:**
-  - Serves as the single source of truth for curriculum schemas: `course`, `module`, `lesson`, `instructor`, `category`, `video`, `agentContext`, and `progress`.
-  - Content authoring using rich Portable Text for lesson notes, key points, and learning outcomes.
-  - Generates strict TypeScript types via `sanity typegen`.
-  - Powers the **Sanity Context MCP** endpoint (`SANITY_CONTEXT_MCP_URL`), allowing the AI search agent to query the private schema context and execute grounded GROQ queries.
-  - Serves private dataset reads via server-only read tokens (`SANITY_API_READ_TOKEN`) and atomic progress/bookmark mutations via write tokens (`SANITY_API_WRITE_TOKEN`).
-* **Free-Tier Limits:** Free plan includes **20 admin users, 100,000 API CDN requests/month, 10GB asset storage, and 10,000 documents**.
-* **Viable Alternatives:**
-  - **[Payload CMS](https://payloadcms.com/):** Code-first, open-source Next.js headless CMS with native TypeScript and PostgreSQL/MongoDB support.
-  - **[Strapi](https://strapi.io/):** Popular open-source Node.js headless CMS with customizable REST/GraphQL endpoints.
-  - **[Supabase (PostgreSQL + pgvector)](https://supabase.com/):** Direct relational database schema with vector embeddings for semantic search.
-  - **[Contentful](https://www.contentful.com/):** Enterprise managed headless CMS.
+## 💡 Key Engineering Challenges & Deep Dives
 
----
+### Challenge 1: Temporal Grounding in Video Lessons Without Full Transcript Dumps
+* **Problem:** Dumping an entire 45-minute lesson transcript into an LLM prompt exhausts token context limits, inflates API latency to >5 seconds, and increases hallucination risks.
+* **Engineering Solution:** Implemented a two-stage sliding window architecture. In static search, authored chapter markers are checked first; only if unmatched does the system query timestamped transcript chunks. In the video copilot, the system dynamically slices a **90-second temporal window** (`currentTime - 45s` to `currentTime + 45s`), feeding exactly 250–400 tokens of localized context to OpenAI. Responses return in <800ms with inline clickable `[MM:SS]` badges.
 
-### 3. 📊 PostHog (Product Analytics & Telemetry)
-* **Purpose & Usage in Vertex:**
-  - Captures privacy-preserving product engagement events on both client and server:
-    - `catalog_viewed` & `course_detail_viewed`
-    - `search_performed` (tracks query terms, search latency, and result counts)
-    - `lesson_viewed` & `course_bookmarked`
-    - `video_progress_milestone` (fires at 25%, 50%, 75%, and 100% video completion)
-  - Links anonymous sessions to authenticated users via the `<PostHogIdentity />` component.
-* **Free-Tier Limits:** **1,000,000 events/month and 5,000 session recordings/month for free**.
-* **Viable Alternatives:**
-  - **[Mixpanel](https://mixpanel.com/):** Product event analytics with 20M monthly events on free plan.
-  - **[Plausible Analytics](https://plausible.io/) / [Umami](https://umami.is/):** Lightweight, open-source, cookie-less web analytics.
-  - **[Google Analytics 4 (GA4)](https://analytics.google.com/):** Free standard web telemetry and conversion tracking.
+### Challenge 2: Idempotent Stripe Webhook Ingestion in Serverless Environments
+* **Problem:** Network retries from payment processors can trigger duplicate webhook deliveries, risking multiple entitlement records or duplicated analytics events.
+* **Engineering Solution:** Built an in-memory TTL/LRU idempotency cache (`SimpleMemoryCache`) paired with strict signature tolerance checking. The raw request buffer is validated against Stripe signing secrets, and duplicate event IDs are returned with a `200 OK` early exit before mutating any datastores.
 
----
+### Challenge 3: Tamper-Proof Completion Certificates Without Database Bloat
+* **Problem:** Storing every issued certificate in a relational database creates storage overhead and requires database availability for third-party credential verification.
+* **Engineering Solution:** Devised a stateless cryptographic certificate protocol. The certificate payload (`userId`, `courseId`, `learnerName`, `issuedAt`, `nonce`) is digested with SHA-256 and signed via HMAC-SHA256 using an isolated server secret. Public verification at `/verify/[id]` recalculates the digest and verifies signature authenticity in constant time with zero database reads.
 
-### 4. 🐇 CodeRabbit (AI-Powered Code Reviews & CI/CD Guardrails)
-* **Purpose & Usage in Vertex:**
-  - Automated pull request code reviews directly on GitHub.
-  - Enforces Next.js 16 App Router best practices, detects token leaks (e.g., verifying `SANITY_API_WRITE_TOKEN` remains strictly server-side), catches React hydration issues, and checks GROQ query efficiency.
-  - Summarizes architectural diffs and validates test coverage across monorepo workspaces.
-* **Free-Tier Limits:** Free 14-day Pro trial; **Free for open-source public repositories on GitHub/GitLab**.
-* **Viable Alternatives:**
-  - **[Qodo / PR-Agent](https://github.com/qodo-ai/pr-agent):** Open-source AI code review agent runnable in self-hosted GitHub Actions workflows.
-  - **[Sourcery](https://sourcery.ai/):** AI-powered automated refactoring and PR review bot for Python and TypeScript.
-  - **[SonarQube / SonarCloud](https://www.sonarsource.com/):** Industry-standard static analysis for code quality, security vulnerabilities, and test coverage.
-
----
-
-## 📦 How to Seed Initial Content into Sanity
-
-When setting up Vertex on a fresh Sanity project, your dataset will initially be empty. Follow these step-by-step instructions to load the curated courses, lessons, and AI Search Context:
-
-### Step 1: Login to Sanity CLI
-```bash
-cd studio
-npx sanity login
-```
-
-### Step 2: Import Courses, Lessons & Modules
-Vertex includes a comprehensive seed dataset containing structured courses (Next.js for Production, DevOps with Docker & Kubernetes, TypeScript, System Design, AI Apps), lesson notes, modules, instructors, and categories:
-
-```bash
-# Import the seed dataset into your production dataset
-npx sanity dataset import scripts/seed/seed.ndjson production --replace
-```
-
-### Step 3: Import AI Search Context Configuration
-The AI search agent relies on an `agentContext` document in Sanity that instructs the LLM on schema relationships (such as reverse references between lessons and courses):
-
-```bash
-# Import the AI Search Context document
-npx sanity dataset import scripts/seed/context.ndjson production --replace
-```
-
-### Step 4: Deploy the Studio UI
-> ⚠️ **Critical:** The Sanity Context MCP requires a deployed Studio application before it can serve dataset context to OpenAI.
-
-```bash
-npm run deploy
-# This deploys your Studio to https://<your-project-id>.sanity.studio
-```
-
-### Step 5: (Optional) Ingest Custom YouTube Video Transcripts
-To add your own YouTube videos to the search index with timestamped transcript chunking:
-
-```bash
-# Ingests video transcript into Sanity video documents
-npm run ingest -- --url="https://www.youtube.com/watch?v=YOUR_VIDEO_ID"
-```
-
-### Step 6: Generate TypeScript Types
-Regenerate frontend TypeScript types based on your populated schema:
-
-```bash
-npm run typegen
-```
-
----
-
-## 🔍 Intelligent Search Pipeline
-
-```
-User Query: "how to create a custom hook in React"
-   │
-   ▼
-[Next.js API Route Handler: /api/search]
-   │
-   ├─► 1. Query Normalization & Technical Synonym Expansion (Hook → State, Custom, Reusable)
-   ├─► 2. Conversational Stop-Word Filtering ("can you tell me", "how to")
-   ├─► 3. Connect to Sanity Context MCP (Injected schema + inline system prompt)
-   ├─► 4. OpenAI GPT-4o Generates Grounded GROQ Query
-   ├─► 5. Two-Stage Timestamp Resolution:
-   │        ├── Priority 1: Authored Chapter Markers (Clean topic titles)
-   │        └── Priority 2: Timestamped Transcript Chunks (Fallback speech search)
-   │
-   ▼
-Structured JSON Output:
-   ├── Video Moment Cards (Course icon, lesson label, start second, seek link)
-   └── Lesson Cards (Course title, module number, key points, description)
-```
+### Challenge 4: High-Density UI Ergonomics & Viewport Sizing
+* **Problem:** Dense auth and dashboard cards with arbitrary margins overflow standard 768px–900px laptop screens, forcing vertical scrolling and degrading the initial onboarding impression.
+* **Engineering Solution:** Applied strict `/ui-ux-pro-max` design intelligence. Enforced 44px standard accessible touch targets (`h-11`), standardized field spacing (`space-y-3.5`, `mb-1.5` labels), switched flex inputs to `flex-1 min-w-0` to eliminate icon boundary overflow, and constrained outer wrappers to `py-5 sm:py-7`. The entire auth card sits comfortably inside the visible viewport on all devices.
 
 ---
 
 ## ⚖️ Full Legal, Compliance & SEO Suite
 
-Vertex includes a comprehensive, production-grade 9-part compliance suite:
+Vertex features a production-grade 11-part compliance and SEO suite designed to meet enterprise standards:
 
-| Route | Shortcut Alias | Description |
-|---|---|---|
-| `/privacy-policy` | `/privacy` | Full GDPR, UK GDPR, and CCPA/CPRA privacy notice detailing Clerk auth, Sanity storage, PostHog telemetry, and data subject rights. |
-| `/terms-of-service` | `/terms` | Platform terms of use, educational portfolio disclaimer, YouTube embed terms, and DMCA safe harbor procedures. |
-| `/cookie-policy` | `/cookies` | Categorized disclosure of essential auth cookies (`__session`), local storage (`vertex-theme`), and PostHog analytics. |
-| `/accessibility-statement` | `/accessibility` | Commitment to **WCAG 2.1 Level AA**, keyboard focus navigation, high-contrast light/dark themes, and screen reader landmarks. |
-| `/dmca` | `/dmca-policy` | Dedicated DMCA takedown policy with 24–48h processing guarantee and Designated Agent info (`abhijeetrawat45@gmail.com`). |
-| `/video-embedding-policy` | `/video-policy` | Architectural disclosure of third-party iframe embed streaming without downloading, altering, or re-hosting video media. |
-| `/security-notice` | `/security` | Token isolation architecture, TLS 1.3 transit encryption, rate limiting, and vulnerability disclosure reporting. |
-| `/user-rights-portal` | `/user-rights` | Interactive self-service data subject portal allowing learners to export their progress data (JSON) or submit erasure requests. |
-| `/data-processing-agreement` | `/dpa` | Demonstration GDPR Article 28 DPA detailing sub-processors (Clerk, Sanity, PostHog) and security measures. |
-| `/sitemap.xml` | — | Dynamic XML sitemap indexing all canonical routes with priority and change frequency metadata. |
-| `/robots.txt` | — | Search engine crawler rules allowing public content and disallowing internal API endpoints. |
+| Route | Shortcut Alias | Regulatory Standard | Description |
+|---|---|---|---|
+| `/privacy-policy` | `/privacy` | GDPR, CCPA/CPRA, UK GDPR | Full data protection notice covering auth, storage, cookies, and telemetry. |
+| `/terms-of-service` | `/terms` | Commercial Law, DMCA 512 | Platform terms of service, acceptable use, and YouTube API embed disclosures. |
+| `/cookie-policy` | `/cookies` | ePrivacy Directive | Categorized disclosures of strictly necessary session cookies and analytics tokens. |
+| `/accessibility-statement` | `/accessibility` | **WCAG 2.1 Level AA** | Accessible contrast, focus outlines, keyboard navigation, and screen reader landmarks. |
+| `/dmca` | `/dmca-policy` | DMCA Safe Harbor (17 U.S.C. § 512) | Designated copyright agent information, takedown request instructions, and counter-notices. |
+| `/video-embedding-policy` | `/video-policy` | Copyright & Terms Compliance | Disclosure of third-party iframe embed streaming with zero video re-hosting. |
+| `/security-notice` | `/security` | SOC 2 / ISO 27001 Alignment | Transit encryption (TLS 1.3), token isolation, rate limiting, and vulnerability disclosure. |
+| `/user-rights-portal` | `/user-rights` | GDPR Art. 15–17 (Access & Erasure) | Interactive self-service portal allowing learners to export JSON data or request deletion. |
+| `/data-processing-agreement` | `/dpa` | GDPR Art. 28 Sub-processor Notice | Formal data processing terms covering Clerk, Sanity, Stripe, and PostHog. |
+| `/sitemap.xml` | — | Google / Bing SEO Standard | Dynamic XML sitemap indexing all canonical routes with priority and change frequencies. |
+| `/robots.txt` | — | Robots Exclusion Protocol | Crawler directives allowing public content indexing and disallowing private API routes. |
 
 ---
 
-## ⚙️ Environment Variables Reference
+## 🧪 Automated Testing & Quality Benchmarks
 
-### `web/` Environment Setup (`web/.env.local`)
+Vertex maintains high engineering standards with a comprehensive automated test suite built on the native Node.js test runner (`node:test`) and strict TypeScript verification:
+
+```bash
+cd web
+
+# Run full automated test suite (214 tests across 77 test suites)
+npm test
+
+# Run strict TypeScript type verification (0 errors)
+npm run type-check
+
+# Run ESLint validation
+npm run lint
+
+# Run Next.js production build with Turbopack
+npm run build
+```
+
+### Test Suite Distribution:
+* **Video Controls & Time Formats:** `formatVideoTime`, `getNextPlaybackRate`, `clampSeekTime`, embed URL parameter generation.
+* **Search & Two-Stage Timestamping:** Query token normalization, chapter priority resolution, transcript fallback truncation.
+* **Interactive Media Engine:** Transcript time sync, note creation, markdown jump anchors, knowledge checkpoints.
+* **AI Copilot & Sliding-Window RAG:** 90s temporal window boundaries, click-to-seek `[MM:SS]` regex parsing, SSE streaming fallbacks.
+* **Gamification & HMAC Certificates:** HMAC-SHA256 signature generation, payload hashing, signature verification, streak momentum logic.
+* **SaaS Monetization & Stripe:** Webhook signature verification, idempotency replay caching, customer entitlement verification.
+* **Security & Redirect Defense:** Open redirect attack blocking, legacy Clerk hash fragment sanitization, path whitelist validation.
+
+---
+
+## 🚀 Getting Started Locally
+
+### 1. Prerequisites
+* Node.js 18.18+ or 20+
+* Git
+* Clerk account (Free tier)
+* Sanity account (Free tier)
+* OpenAI API key
+
+### 2. Monorepo Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/Abhijith45/vertex-lms.git
+cd vertex
+
+# Install dependencies across both workspaces
+cd studio && npm install
+cd ../web && npm install
+```
+
+### 3. Environment Configuration
+
+Create `web/.env.local` using the template below:
 
 ```env
-# ─────────────────────────────────────────────────────────
-# Clerk Authentication (https://dashboard.clerk.com)
-# ─────────────────────────────────────────────────────────
+# Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 
-# ─────────────────────────────────────────────────────────
-# Sanity CMS (https://sanity.io/manage)
-# ─────────────────────────────────────────────────────────
+# Sanity CMS & Context MCP
 NEXT_PUBLIC_SANITY_PROJECT_ID=your_project_id
 NEXT_PUBLIC_SANITY_DATASET=production
 SANITY_API_READ_TOKEN=sk_viewer_token...
 SANITY_API_WRITE_TOKEN=sk_editor_token...
 SANITY_CONTEXT_MCP_URL=https://api.sanity.io/v2026-03-03/context/mcp/YOUR_PROJECT_ID/production/search-context
 
-# ─────────────────────────────────────────────────────────
-# OpenAI Platform (https://platform.openai.com)
-# ─────────────────────────────────────────────────────────
+# OpenAI
 OPENAI_API_KEY=sk-proj-...
 
-# ─────────────────────────────────────────────────────────
-# PostHog Analytics (https://app.posthog.com)
-# ─────────────────────────────────────────────────────────
+# Stripe SaaS
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# PostHog Analytics
 NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN=phc_...
 NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
 
-# ─────────────────────────────────────────────────────────
-# Site Canonical URL
-# ─────────────────────────────────────────────────────────
-NEXT_PUBLIC_SITE_URL=https://vertex.example.com
+# Certificates Secret
+CERTIFICATE_SIGNING_SECRET=your_super_secret_hmac_signing_key_32_bytes_long
 ```
 
-### `studio/` Environment Setup (`studio/.env.local`)
-
-```env
-SANITY_STUDIO_PROJECT_ID=your_project_id
-SANITY_STUDIO_DATASET=production
-SANITY_API_WRITE_TOKEN=sk_editor_token...
-```
-
----
-
-## 🚀 Running Locally
+### 4. Seed Content into Sanity
 
 ```bash
-# 1. Install workspace dependencies
-cd studio && npm install
-cd ../web && npm install
-
-# 2. Seed initial Sanity content (if fresh project)
-cd ../studio
+cd studio
+npx sanity login
 npx sanity dataset import scripts/seed/seed.ndjson production --replace
 npx sanity dataset import scripts/seed/context.ndjson production --replace
+npm run deploy
+```
 
-# 3. Start development servers
+### 5. Start Development Servers
+
+```bash
 # Terminal 1: Sanity Studio (http://localhost:3333)
 cd studio && npm run dev
 
@@ -263,55 +366,17 @@ cd web && npm run dev
 
 ---
 
-## 🧪 Testing & Code Quality
-
-Execute tests and validation from `web/`:
-
-```bash
-cd web
-
-# Run full unit test suite (150 tests covering search, video controls, bookmarks, compliance)
-npm test
-
-# Strict TypeScript type check
-npm run type-check
-
-# ESLint code inspection
-npm run lint
-
-# Production build validation with Turbopack
-npm run build
-```
-
----
-
-## 🚢 Deployment
-
-### 1. Web Deployment (Vercel — Recommended)
-1. Push your repository to GitHub.
-2. Import the project into [Vercel](https://vercel.com) and set the **Root Directory** to `web`.
-3. Add all environment variables from `web/.env.example` in the Vercel dashboard.
-4. Deploy.
-
-### 2. Sanity Studio Deployment
-Deploy the Studio UI to Sanity's managed cloud (required for Context MCP):
-```bash
-cd studio
-npm run deploy
-```
-
----
-
 ## 👨‍💻 Developer & Contact
 
-**Vertex** is engineered by **Abhijeet Rawat** as a portfolio and educational demonstration.
+**Vertex** is conceived, designed, and engineered by **Abhijeet Rawat**.
 
 * **Developer:** Abhijeet Rawat
-* **Email & DMCA Agent:** [abhijeetrawat45@gmail.com](mailto:abhijeetrawat45@gmail.com)
-* **GitHub Repository:** [https://github.com/Abhijith45/vertex-lms](https://github.com/Abhijith45/vertex-lms)
+* **Email & DMCA Designated Agent:** [abhijeetrawat45@gmail.com](mailto:abhijeetrawat45@gmail.com)
+* **GitHub:** [https://github.com/Abhijith45](https://github.com/Abhijith45)
+* **LinkedIn:** [https://www.linkedin.com/in/abhijeet-rawat/](https://www.linkedin.com/in/abhijeet-rawat/)
 
 ---
 
-## 📄 License & Fair Use Notice
+## 📄 License & Fair Use
 
-Vertex is provided for educational and portfolio demonstration purposes. All course video content is streamed via official third-party embed players (YouTube API). All copyrights, trademarks, and intellectual property remain the exclusive property of their respective creators.
+This project is licensed for portfolio, educational, and evaluation purposes. All instructional video content is streamed via official third-party embed APIs (YouTube API). All copyrights, trademarks, and intellectual property remain the property of their respective creators.

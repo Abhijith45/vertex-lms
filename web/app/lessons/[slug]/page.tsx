@@ -8,6 +8,7 @@ import { LessonViewTracker } from "@/components/lesson/lesson-view-tracker";
 import { LessonSidebar } from "@/components/lesson/lesson-sidebar";
 import { LessonContentTabs } from "@/components/lesson/lesson-content-tabs";
 import { LessonFooterNav } from "@/components/lesson/lesson-footer-nav";
+import { LessonPlaybackProvider } from "@/components/lesson/lesson-playback-context";
 import { BookmarkButton } from "@/components/course/bookmark-button";
 import { sanityFetch } from "@/sanity/lib/client";
 import { getLessonWithCourseQuery, getCourseBySlugQuery } from "@/sanity/lib/queries";
@@ -67,6 +68,36 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
       console.error("Error fetching fallback course:", e);
     }
   }
+
+  // Fetch video intelligence (chapters & transcript chunks) if available
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let videoDoc: any = null;
+  if (lesson?.videoUrl) {
+    try {
+      videoDoc = await sanityFetch({
+        query: `*[_type == "video" && (url == $url || videoId in $url)][0] {
+          chapters[]{ startSeconds, label },
+          chunks[]{ startSeconds, text }
+        }`,
+        params: { url: lesson.videoUrl },
+        tags: ["videos"],
+        revalidate: 300,
+      });
+    } catch {
+      // Non-critical: falls back to curriculum chapters or default transcript cues
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const transcriptCues = videoDoc?.chunks?.map((ch: any) => ({
+    start: ch.startSeconds,
+    text: ch.text,
+  }));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const chapters = videoDoc?.chapters?.map((cp: any) => ({
+    startSeconds: cp.startSeconds,
+    label: cp.label,
+  }));
 
   // Resolve curriculum numbering and navigation
   const {
@@ -155,10 +186,11 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
             />
 
             {/* Right Lesson Content Area */}
-            <main className="flex-1 p-6 sm:p-10 lg:p-12 max-w-5xl">
-              {/* ──────────────────────────────────────────────────────────
-                 BREADCRUMB
-                 ────────────────────────────────────────────────────────── */}
+            <LessonPlaybackProvider>
+              <main className="flex-1 p-6 sm:p-10 lg:p-12 max-w-5xl">
+                {/* ──────────────────────────────────────────────────────────
+                   BREADCRUMB
+                   ────────────────────────────────────────────────────────── */}
               <nav aria-label="Breadcrumb" className="mb-6 flex flex-wrap items-center gap-2 text-xs sm:text-sm text-neutral-500 dark:text-neutral-400">
                 <Link href="/courses" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
                   All Courses
@@ -259,6 +291,10 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
                 proTip={lesson.proTip}
                 resources={lesson.resources}
                 lessonSlug={slug}
+                lessonTitle={lesson.title}
+                courseTitle={course?.title}
+                transcriptCues={transcriptCues}
+                chapters={chapters}
               />
 
               {/* ──────────────────────────────────────────────────────────
@@ -266,6 +302,7 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
                  ────────────────────────────────────────────────────────── */}
               <LessonFooterNav prevLesson={prevLesson} nextLesson={nextLesson} courseSlug={course?.slug} />
             </main>
+          </LessonPlaybackProvider>
           </div>
         </div>
       </div>

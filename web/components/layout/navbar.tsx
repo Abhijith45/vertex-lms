@@ -1,10 +1,12 @@
 import React from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
+import { Show, UserButton } from "@clerk/nextjs";
 import { VertexLogo } from "@/components/home/vertex-logo";
 import { SearchInput } from "@/components/search/search-input";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { StreakBadge } from "@/components/layout/streak-badge";
+import { buildAuthUrl } from "@/lib/utils/url";
 
 interface NavbarProps {
   activePath?: string;
@@ -64,6 +66,7 @@ export function Navbar({ activePath, showSearch = true }: NavbarProps) {
         <ThemeToggle />
 
         <Show when="signed-in">
+          <StreakBadge />
           <button
             type="button"
             className="relative flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 dark:text-neutral-300 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400 cursor-pointer"
@@ -81,22 +84,18 @@ export function Navbar({ activePath, showSearch = true }: NavbarProps) {
         </Show>
 
         <Show when="signed-out">
-          <SignInButton>
-            <button
-              type="button"
-              className="text-sm font-medium text-neutral-700 dark:text-neutral-300 transition-colors hover:text-neutral-900 dark:hover:text-white px-3 py-1.5 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer"
-            >
-              Sign in
-            </button>
-          </SignInButton>
-          <SignUpButton>
-            <button
-              type="button"
-              className="inline-flex items-center rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 px-4 py-2 text-sm font-medium text-white dark:text-neutral-900 transition-all shadow-xs hover:shadow-sm cursor-pointer"
-            >
-              Get started
-            </button>
-          </SignUpButton>
+          <Link
+            href={buildAuthUrl("sign-in", activePath)}
+            className="text-sm font-medium text-neutral-700 dark:text-neutral-300 transition-colors hover:text-neutral-900 dark:hover:text-white px-3 py-1.5 rounded-lg hover:bg-neutral-50 dark:hover:bg-neutral-800/50 cursor-pointer"
+          >
+            Sign in
+          </Link>
+          <Link
+            href={buildAuthUrl("sign-up", activePath)}
+            className="inline-flex items-center rounded-xl bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:hover:bg-neutral-100 px-4 py-2 text-sm font-medium text-white dark:text-neutral-900 transition-all shadow-xs hover:shadow-sm cursor-pointer"
+          >
+            Get started
+          </Link>
         </Show>
       </div>
     </header>

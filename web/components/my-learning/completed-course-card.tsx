@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { CheckCircle2, RotateCcw } from "lucide-react";
+import { CheckCircle2, RotateCcw, Award } from "lucide-react";
 import { CourseIcon } from "@/components/home/course-icons";
 
 export interface CompletedCourseData {
@@ -42,12 +42,19 @@ export function CompletedCourseCard({ course }: { course: CompletedCourseData })
         </span>
       </div>
 
-      <div className="flex items-center gap-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+        <Link
+          href={`/verify/vtx-cert-${course.courseSlug}`}
+          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#E05A36] hover:bg-[#C2410C] text-white px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors shadow-xs"
+        >
+          <Award className="h-4 w-4" />
+          <span>View Certificate</span>
+        </Link>
         <Link
           href={`/courses/${course.courseSlug}`}
-          className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-100 px-4 py-2.5 text-xs sm:text-sm font-semibold transition-colors"
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-100 px-3.5 py-2.5 text-xs sm:text-sm font-semibold transition-colors"
         >
-          <span>View Course</span>
+          <span>Course Details</span>
         </Link>
         <Link
           href={replayUrl}

@@ -1,5 +1,5 @@
 import React from "react";
-import { BookOpen, CheckCircle2, Clock, Bookmark } from "lucide-react";
+import { BookOpen, CheckCircle2, Clock, Bookmark, Flame } from "lucide-react";
 
 interface MyLearningHeroProps {
   userName?: string | null;
@@ -7,6 +7,7 @@ interface MyLearningHeroProps {
   completedLessonsCount: number;
   completedCoursesCount: number;
   savedCoursesCount?: number;
+  streakDays?: number;
 }
 
 export function MyLearningHero({
@@ -15,6 +16,7 @@ export function MyLearningHero({
   completedLessonsCount,
   completedCoursesCount,
   savedCoursesCount = 0,
+  streakDays = 3,
 }: MyLearningHeroProps) {
   const greeting = userName ? `Welcome back, ${userName}` : "Welcome back";
 
@@ -35,6 +37,21 @@ export function MyLearningHero({
 
         {/* Learning Metric Summary Badges */}
         <div className="flex flex-wrap items-center gap-3 select-none">
+          {/* Learning Streak */}
+          <div className="flex items-center gap-3 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-[#FAF9F6] dark:bg-neutral-900/80 px-4 py-2.5 shadow-2xs">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-500/15 text-[#E05A36]">
+              <Flame className="h-4.5 w-4.5" fill="currentColor" />
+            </div>
+            <div>
+              <span className="block text-lg font-bold text-neutral-900 dark:text-neutral-100 leading-none">
+                {streakDays}d
+              </span>
+              <span className="text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+                Streak
+              </span>
+            </div>
+          </div>
+
           {/* Active Courses */}
           <div className="flex items-center gap-3 rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-[#FAF9F6] dark:bg-neutral-900/80 px-4 py-2.5 shadow-2xs">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF5EE] dark:bg-primary-500/15 text-[#E05A36] dark:text-primary-400">
