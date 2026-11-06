@@ -65,9 +65,11 @@ const DEFAULT_FALLBACK_CUES: TranscriptCue[] = [
   },
 ];
 
+const DEFAULT_EMPTY_CHAPTERS: Array<{ startSeconds: number; label: string }> = [];
+
 export function InteractiveTranscript({
   cues,
-  chapters = [],
+  chapters = DEFAULT_EMPTY_CHAPTERS,
   lessonTitle,
 }: InteractiveTranscriptProps) {
   const { currentTime, seekTo } = useLessonPlayback();
@@ -172,12 +174,14 @@ export function InteractiveTranscript({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search within transcript..."
+            aria-label="Search within transcript"
             className="w-full h-9 pl-9 pr-8 rounded-lg border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-xs text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-hidden focus:border-[#E05A36] focus:ring-1 focus:ring-[#E05A36]/30 transition-all"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
+              aria-label="Clear transcript search"
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300 p-0.5 cursor-pointer"
             >
               <X className="h-3.5 w-3.5" />

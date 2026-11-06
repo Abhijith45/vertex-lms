@@ -1,11 +1,11 @@
 import React from "react";
 import Link from "next/link";
-import { Bell } from "lucide-react";
 import { Show, UserButton } from "@clerk/nextjs";
 import { VertexLogo } from "@/components/home/vertex-logo";
 import { SearchInput } from "@/components/search/search-input";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { StreakBadge } from "@/components/layout/streak-badge";
+import { NotificationPopover } from "@/components/layout/notification-popover";
 import { buildAuthUrl } from "@/lib/utils/url";
 
 interface NavbarProps {
@@ -67,13 +67,7 @@ export function Navbar({ activePath, showSearch = true }: NavbarProps) {
 
         <Show when="signed-in">
           <StreakBadge />
-          <button
-            type="button"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 dark:text-neutral-300 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary-400 cursor-pointer"
-            aria-label="View notifications"
-          >
-            <Bell className="h-4.5 w-4.5" strokeWidth={1.75} />
-          </button>
+          <NotificationPopover />
           <UserButton
             appearance={{
               elements: {

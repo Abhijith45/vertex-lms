@@ -206,6 +206,7 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
             }, 200);
           }}
           onKeyDown={handleKeyDown}
+          aria-label="Search courses, lessons, and topics"
           placeholder="Search for concepts, courses, or specific moments..."
           className="w-full rounded-full border border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 py-2.5 pl-5 pr-20 text-sm text-gray-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 shadow-xs focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 transition-all"
         />
@@ -248,7 +249,7 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
               <ul className="space-y-0.5">
                 {keywords.map((kw, idx) => (
                   <li
-                    key={idx}
+                    key={kw}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       handleSelectKeyword(kw);

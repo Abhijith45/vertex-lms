@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Star } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
@@ -11,6 +12,49 @@ import { ExploreCoursesButton } from "@/components/home/explore-courses-button";
 import { sanityFetch } from "@/sanity/lib/client";
 import { getCoursesQuery } from "@/sanity/lib/queries";
 import { formatDuration } from "@/lib/utils/format";
+
+function getSafeSiteUrl(): URL {
+  try {
+    const raw = process.env.NEXT_PUBLIC_SITE_URL;
+    if (raw && (raw.startsWith("http://") || raw.startsWith("https://"))) {
+      return new URL(raw);
+    }
+  } catch {
+    // Fall back to production default if malformed
+  }
+  return new URL("https://vertex.dev");
+}
+
+export const metadata: Metadata = {
+  metadataBase: getSafeSiteUrl(),
+  title: "Vertex — Production-Grade AI Engineering & Full-Stack Learning Platform",
+  description:
+    "Master Next.js App Router, distributed systems, and LLM AI apps with in-video moment search, AI Copilot, and cryptographically verified certificates.",
+  openGraph: {
+    title: "Vertex — Production-Grade AI Engineering & Full-Stack Learning Platform",
+    description:
+      "Master Next.js App Router, distributed systems, and LLM AI apps with in-video moment search, AI Copilot, and cryptographically verified certificates.",
+    url: "https://vertex.dev",
+    siteName: "Vertex LMS",
+    images: [
+      {
+        url: "/api/og",
+        width: 1200,
+        height: 630,
+        alt: "Vertex LMS Platform",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vertex — Full-Stack Learning Platform",
+    description:
+      "Interactive video intelligence, in-video AI Copilot, checkpoints, and verified certification.",
+    images: ["/api/og"],
+  },
+};
 
 export default async function HomePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

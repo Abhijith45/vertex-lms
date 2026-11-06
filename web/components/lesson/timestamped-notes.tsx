@@ -268,6 +268,7 @@ export function TimestampedNotes({
                 handleCreateNote(e);
               }
             }}
+            aria-label="New note content"
             placeholder="Type key takeaway, code concept, or question for this moment..."
             className="w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50 p-3 text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:outline-hidden focus:border-[#E05A36] focus:bg-white dark:focus:bg-neutral-800 transition-all resize-none"
           />
@@ -343,6 +344,7 @@ export function TimestampedNotes({
                       onClick={(e) => handleStartEdit(note, e)}
                       className="p-1.5 rounded-md text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
                       title="Edit note"
+                      aria-label="Edit note"
                     >
                       <Edit2 className="h-3.5 w-3.5" />
                     </button>
@@ -351,6 +353,7 @@ export function TimestampedNotes({
                       onClick={(e) => handleDeleteNote(note.id, e)}
                       className="p-1.5 rounded-md text-neutral-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
                       title="Delete note"
+                      aria-label="Delete note"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -364,6 +367,7 @@ export function TimestampedNotes({
                       rows={3}
                       value={editText}
                       onChange={(e) => setEditText(e.target.value)}
+                      aria-label="Edit note content"
                       className="w-full rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50/50 dark:bg-neutral-800/50 p-2.5 text-xs sm:text-sm text-neutral-900 dark:text-neutral-100 focus:outline-hidden focus:border-[#E05A36]"
                     />
                     <div className="flex items-center justify-end gap-2">

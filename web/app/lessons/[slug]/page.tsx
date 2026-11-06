@@ -102,6 +102,7 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
   // Resolve curriculum numbering and navigation
   const {
     moduleIndex,
+    overallLessonIndex,
     lessonLabel,
     currentModule,
     prevLesson,
@@ -278,6 +279,7 @@ export default async function LessonPage({ params, searchParams }: LessonPagePro
                   nextLessonSlug={nextLesson?.lesson.slug}
                   lessonSlug={slug}
                   courseSlug={course?.slug}
+                  lessonIndex={overallLessonIndex}
                   freePreview={Boolean(lesson.freePreview)}
                 />
               </div>

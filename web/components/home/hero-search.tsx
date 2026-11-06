@@ -25,10 +25,9 @@ export function HeroSearch() {
 
   return (
     <>
-      <div
+      <search
         onClick={handleOpenModal}
-        className="w-full max-w-[680px] mx-auto mt-8 relative cursor-pointer group"
-        role="search"
+        className="w-full max-w-[680px] mx-auto mt-8 relative cursor-pointer group block"
       >
         <div className="relative flex items-center w-full h-[56px] rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/95 px-5 shadow-xs transition-all duration-200 hover:border-primary-300 dark:hover:border-primary-600 group-hover:shadow-md focus-within:border-primary-400 focus-within:ring-4 focus-within:ring-primary-400/15">
           <Search
@@ -52,7 +51,7 @@ export function HeroSearch() {
             </kbd>
           </div>
         </div>
-      </div>
+      </search>
 
       {/* Interactive Search Modal */}
       <SearchModal

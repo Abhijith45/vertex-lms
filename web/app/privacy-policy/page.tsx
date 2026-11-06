@@ -1,9 +1,10 @@
 import React from "react";
 import Link from "next/link";
-import { ChevronRight, ShieldCheck, Mail, Lock, Database, Eye, RefreshCw } from "lucide-react";
+import { ChevronRight, ShieldCheck, Lock, Database, Eye, RefreshCw } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
+import { PolicyContactSection } from "@/components/compliance/policy-contact-card";
 
 export const metadata = {
   title: "Privacy Policy | Vertex",
@@ -153,25 +154,12 @@ export default function PrivacyPolicyPage() {
               </section>
 
               {/* Section 5 */}
-              <section className="space-y-3">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
-                  <Mail className="h-5 w-5 text-primary-500" />
-                  <span>5. Data Controller Contact & Deletion Requests</span>
-                </h2>
-                <p>
-                  If you have any questions regarding this Privacy Policy, wish to exercise your data rights, or request immediate deletion of your learner record, please send an email to:
-                </p>
-                <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-5 bg-neutral-50 dark:bg-neutral-900/60 max-w-md">
-                  <p className="text-xs uppercase tracking-wider text-neutral-500 font-semibold mb-1">Developer & Data Contact</p>
-                  <p className="font-bold text-neutral-900 dark:text-white text-base">Abhijeet Rawat</p>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                    Email: <a href="mailto:abhijeetrawat45@gmail.com" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">abhijeetrawat45@gmail.com</a>
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
-                    Requests are fulfilled manually within 24 to 48 hours.
-                  </p>
-                </div>
-              </section>
+              <PolicyContactSection
+                sectionTitle="5. Data Controller Contact & Deletion Requests"
+                description="If you have any questions regarding this Privacy Policy, wish to exercise your data rights, or request immediate deletion of your learner record, please send an email to:"
+                role="Developer & Data Contact"
+                note="Requests are fulfilled manually within 24 to 48 hours."
+              />
             </div>
           </main>
         </div>

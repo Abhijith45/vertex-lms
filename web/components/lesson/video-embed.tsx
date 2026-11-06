@@ -24,8 +24,10 @@ import {
   clampSeekTime,
 } from "@/lib/utils/video";
 import posthog from "posthog-js";
-import { AuthPromptModal } from "./auth-prompt-modal";
+import { AuthPromptModal, type PromptModalMode } from "./auth-prompt-modal";
 import { useLessonPlayback } from "./lesson-playback-context";
+import { getFullPlaybackAccessState } from "@/lib/utils/auth-gate";
+import { evaluatePlaybackAccess } from "@/lib/entitlements";
 
 interface VideoEmbedProps {
   videoUrl?: string;
@@ -34,6 +36,7 @@ interface VideoEmbedProps {
   nextLessonSlug?: string;
   lessonSlug?: string;
   courseSlug?: string;
+  lessonIndex?: number;
   freePreview?: boolean;
 }
 
@@ -94,16 +97,37 @@ export function VideoEmbed({
   nextLessonSlug,
   lessonSlug,
   courseSlug,
+  lessonIndex,
+  freePreview,
 }: VideoEmbedProps) {
   const router = useRouter();
-  const { isSignedIn, isLoaded: isAuthLoaded } = useUser();
+  const { isSignedIn, isLoaded: isAuthLoaded, user } = useUser();
   const { registerSeekHandler, updatePlaybackState } = useLessonPlayback();
   const rawId = useId();
   const playerId = `yt-player-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
-  // Auth gate state: show auth modal when unauthenticated user attempts play
-  const [showLoginOverlay, setShowLoginOverlay] = useState(false);
-  const requiresAuth = isAuthLoaded ? !isSignedIn : true;
+  // Entitlement & Access state: evaluate auth, free-preview, and payment requirements
+  const [modalMode, setModalMode] = useState<PromptModalMode>("AUTH");
+  const [showPromptModal, setShowPromptModal] = useState(false);
+
+  const decision = evaluatePlaybackAccess({
+    userId: user?.id,
+    courseSlug: courseSlug || "",
+    lessonIndex,
+    isExplicitFreePreview: Boolean(freePreview),
+  });
+
+  const accessState = getFullPlaybackAccessState({
+    auth: {
+      isAuthLoaded,
+      isSignedIn,
+      userId: user?.id,
+    },
+    isAllowed: decision.allowed,
+    reason: decision.reason,
+  });
+
+  const requiresAuth = !accessState.canPlay;
 
   const hasStartedPlayingRef = useRef(false);
   const milestonesReachedRef = useRef<Set<number>>(new Set());
@@ -489,6 +513,18 @@ export function VideoEmbed({
     }
   }, []);
 
+  // Guarantee all pending timers are cleared on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (hideControlsTimerRef.current) {
+        clearTimeout(hideControlsTimerRef.current);
+      }
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (!isPlaying || isSettingsOpen) {
       setShowControls(true);
@@ -513,9 +549,10 @@ export function VideoEmbed({
   // 4. Player Control Actions
   // ──────────────────────────────────────────────────────────
   const togglePlay = () => {
-    // Gate: if auth is required and user is not signed in, show login overlay
-    if (requiresAuth && !isPlaying) {
-      setShowLoginOverlay(true);
+    // Gate: if access is restricted, trigger the appropriate prompt modal (Auth, Paywall, or Renewal)
+    if (!accessState.canPlay && !isPlaying) {
+      setModalMode(accessState.promptModal || "AUTH");
+      setShowPromptModal(true);
       return;
     }
     if (!playerInstanceRef.current) return;
@@ -703,12 +740,15 @@ export function VideoEmbed({
       )}
 
       {/* ──────────────────────────────────────────────────────────
-         AUTH PROMPT MODAL (shown when unauthenticated user attempts play)
+         AUTH & ENTITLEMENT PROMPT MODAL (shown when playback is restricted)
          ────────────────────────────────────────────────────────── */}
       <AuthPromptModal
-        isOpen={showLoginOverlay && requiresAuth}
-        onClose={() => setShowLoginOverlay(false)}
+        isOpen={showPromptModal && !accessState.canPlay}
+        onClose={() => setShowPromptModal(false)}
         lessonTitle={title}
+        courseSlug={courseSlug}
+        mode={modalMode}
+        lessonIndex={lessonIndex}
       />
 
       {/* ──────────────────────────────────────────────────────────
@@ -975,6 +1015,7 @@ export function VideoEmbed({
                         autoplayNext ? "bg-[#E05A36]" : "bg-neutral-700"
                       }`}
                       role="switch"
+                      aria-label="Autoplay next lesson"
                       aria-checked={autoplayNext}
                     >
                       <span
@@ -1008,9 +1049,12 @@ export function VideoEmbed({
     </>
   ) : (
     <div className="absolute inset-0 h-full w-full">
-      {requiresAuth && (
+      {!accessState.canPlay && (
         <div
-          onClick={() => setShowLoginOverlay(true)}
+          onClick={() => {
+            setModalMode(accessState.promptModal || "AUTH");
+            setShowPromptModal(true);
+          }}
           className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-xs cursor-pointer group"
           aria-label="Play video"
         >

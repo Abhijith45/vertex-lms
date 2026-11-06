@@ -33,6 +33,8 @@ export function BookmarkedCourseCard({
     e.preventDefault();
     e.stopPropagation();
 
+    if (isRemoving) return;
+
     setIsRemoving(true);
     // Optimistic removal
     setIsRemoved(true);

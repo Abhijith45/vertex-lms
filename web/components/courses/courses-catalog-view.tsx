@@ -117,6 +117,7 @@ export function CoursesCatalogView({
             type="text"
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
+            aria-label="Filter courses by title, topic, or keyword"
             placeholder="Search courses by title, topic, or keyword..."
             className="w-full h-12 rounded-2xl border border-neutral-200/90 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 pl-11 pr-10 text-sm sm:text-base text-neutral-900 dark:text-neutral-100 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 shadow-xs transition-all focus:border-primary-400 focus:bg-white dark:focus:bg-neutral-900 focus:outline-hidden focus:ring-4 focus:ring-primary-400/15"
           />

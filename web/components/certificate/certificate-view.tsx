@@ -7,11 +7,8 @@ import {
   Printer,
   Copy,
   Check,
-  ExternalLink,
   Award,
-  Calendar,
   Key,
-  BookOpen,
   ArrowLeft,
   Share2,
 } from "lucide-react";
@@ -30,6 +27,7 @@ export function CertificateView({ certificate, isValid }: CertificateViewProps) 
     month: "long",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   });
 
   const certDateObj = new Date(certificate.issuedAt);

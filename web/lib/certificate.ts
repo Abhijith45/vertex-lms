@@ -15,9 +15,15 @@ export interface Certificate {
   credentialUrl?: string;
 }
 
-const DEFAULT_SECRET =
-  process.env.CERTIFICATE_SECRET_KEY ||
-  "vertex-cryptographic-signing-key-production-sha256";
+export function getCertificateSigningSecret(overrideSecret?: string): string {
+  if (overrideSecret) return overrideSecret;
+  if (process.env.CERTIFICATE_SECRET_KEY) return process.env.CERTIFICATE_SECRET_KEY;
+  if (process.env.CERTIFICATE_SIGNING_SECRET) return process.env.CERTIFICATE_SIGNING_SECRET;
+  if (process.env.NODE_ENV === "production") {
+    console.warn("CRITICAL: CERTIFICATE_SECRET_KEY is not defined in production environment.");
+  }
+  return "vertex-cryptographic-signing-key-dev-sha256";
+}
 
 /**
  * Generate a tamper-proof HMAC-SHA256 signature for a certificate.
@@ -29,10 +35,11 @@ export function generateCertificateSignature(
     courseSlug: string;
     issuedAt: string;
   },
-  secret = DEFAULT_SECRET
+  secret?: string
 ): string {
+  const signingKey = getCertificateSigningSecret(secret);
   const message = `${payload.id}:${payload.userId}:${payload.courseSlug}:${payload.issuedAt}`;
-  return createHmac("sha256", secret).update(message).digest("hex");
+  return createHmac("sha256", signingKey).update(message).digest("hex");
 }
 
 /**
@@ -41,7 +48,7 @@ export function generateCertificateSignature(
  */
 export function verifyCertificate(
   certificate: Certificate,
-  secret = DEFAULT_SECRET
+  secret?: string
 ): boolean {
   if (!certificate || !certificate.signature) return false;
 

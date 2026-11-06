@@ -3,6 +3,11 @@ import assert from "node:assert";
 import {
   verifyStripeWebhookSignature,
   generateTestStripeSignature,
+  getStripeClient,
+  isStripeConfigured,
+  isStripeTestMode,
+  isStripeLiveMode,
+  constructStripeWebhookEvent,
 } from "../lib/stripe.ts";
 import {
   hasCourseAccess,
@@ -154,3 +159,58 @@ describe("Phase 4: Performance Telemetry Spans", () => {
     );
   });
 });
+
+describe("Phase 4: Stripe API SDK Client & Development Mode", () => {
+  it("returns null when no secret key or mock-key is present", () => {
+    const originalKey = process.env.STRIPE_SECRET_KEY;
+    try {
+      delete process.env.STRIPE_SECRET_KEY;
+      assert.strictEqual(getStripeClient(), null);
+      assert.strictEqual(isStripeConfigured(), false);
+
+      process.env.STRIPE_SECRET_KEY = "mock-key";
+      assert.strictEqual(getStripeClient(), null);
+      assert.strictEqual(isStripeConfigured(), false);
+    } finally {
+      process.env.STRIPE_SECRET_KEY = originalKey;
+    }
+  });
+
+  it("initializes Stripe client with valid test key sk_test_...", () => {
+    const testClient = getStripeClient("sk_test_fake_sandbox_key_12345");
+    assert.ok(testClient !== null);
+    assert.ok(typeof testClient.checkout === "object");
+    assert.ok(typeof testClient.checkout.sessions === "object");
+  });
+
+  it("identifies test / sandbox mode vs live mode accurately", () => {
+    const originalKey = process.env.STRIPE_SECRET_KEY;
+    try {
+      process.env.STRIPE_SECRET_KEY = "sk_test_abc123456";
+      assert.strictEqual(isStripeTestMode(), true);
+      assert.strictEqual(isStripeLiveMode(), false);
+
+      process.env.STRIPE_SECRET_KEY = "sk_live_abc123456";
+      assert.strictEqual(isStripeTestMode(), false);
+      assert.strictEqual(isStripeLiveMode(), true);
+    } finally {
+      process.env.STRIPE_SECRET_KEY = originalKey;
+    }
+  });
+
+  it("constructs and verifies webhook payload safely", () => {
+    const rawPayload = JSON.stringify({
+      id: "evt_test_event_999",
+      type: "checkout.session.completed",
+      data: { object: { id: "cs_test_999" } },
+    });
+    const secret = "whsec_test_secret_for_construct_event";
+    const sigHeader = generateTestStripeSignature(rawPayload, secret);
+
+    const event = constructStripeWebhookEvent(rawPayload, sigHeader, secret);
+    assert.ok(event !== null);
+    assert.strictEqual(event?.id, "evt_test_event_999");
+    assert.strictEqual(event?.type, "checkout.session.completed");
+  });
+});
+

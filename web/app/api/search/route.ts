@@ -76,10 +76,6 @@ function trackSearchServer(
   }
 }
 
-// Cached initial context singleton (Section 12 of AGENTS.md)
-let cachedInitialContext: unknown = null;
-let initialContextPromise: Promise<unknown> | null = null;
-
 // Initialize MCP Client
 async function getMcpClient() {
   if (!process.env.SANITY_CONTEXT_MCP_URL || !process.env.SANITY_API_READ_TOKEN) {
@@ -95,31 +91,6 @@ async function getMcpClient() {
       },
     },
   });
-}
-
-// Fetch Initial Context (Schema) with caching
-async function getCachedInitialContext() {
-  if (cachedInitialContext) return cachedInitialContext;
-  if (!initialContextPromise) {
-    initialContextPromise = (async () => {
-      try {
-        const res = await fetch(`${process.env.SANITY_CONTEXT_MCP_URL}/initial-context`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${process.env.SANITY_API_READ_TOKEN}`,
-          },
-        });
-        const data = await res.json();
-        cachedInitialContext = data;
-        return data;
-      } catch (err) {
-        console.error("Error fetching initial context:", err);
-        initialContextPromise = null;
-        return null;
-      }
-    })();
-  }
-  return initialContextPromise;
 }
 
 /**
@@ -237,7 +208,7 @@ export async function GET(req: Request) {
     const directResults = await executeDirectSanitySearch(query);
 
     if (directResults.lessons.length > 0 || directResults.videoMoments.length > 0) {
-      searchResultCache.set(cacheKey, directResults);
+      searchResultCache.put(cacheKey, directResults);
       trackSearchServer(userId, query, directResults, false);
       return NextResponse.json(directResults, {
         headers: {
@@ -252,10 +223,7 @@ export async function GET(req: Request) {
 
   // 3. DEEP / SEMANTIC AI AGENT PATH (for complex conversational queries or when direct search found 0)
   try {
-    const [mcpClient, _initialContext] = await Promise.all([
-      getMcpClient(),
-      getCachedInitialContext(),
-    ]);
+    const mcpClient = await getMcpClient();
 
     const allMcpTools = await mcpClient.tools();
 
@@ -349,7 +317,7 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
       };
     }
 
-    searchResultCache.set(cacheKey, finalResults);
+    searchResultCache.put(cacheKey, finalResults);
     trackSearchServer(userId, query, finalResults, false);
     return NextResponse.json(finalResults, {
       headers: {
@@ -360,7 +328,7 @@ Your sole responsibility is to analyze learner search queries, retrieve matching
   } catch (error: any) {
     console.warn("AI search error or timeout:", error?.message || error);
     const emptyResults: SearchResults = { lessons: [], videoMoments: [] };
-    searchResultCache.set(cacheKey, emptyResults);
+    searchResultCache.put(cacheKey, emptyResults);
     return NextResponse.json(emptyResults, {
       headers: {
         "X-Cache": "MISS-EMPTY",

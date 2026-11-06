@@ -108,3 +108,18 @@ export function clampSeekTime(time: number, duration: number): number {
   const max = duration && duration > 0 ? duration : 0;
   return Math.max(0, Math.min(time, max));
 }
+
+/**
+ * Parse digital timestamp like "[01:30]" or "1:05:30" into total seconds.
+ */
+export function parseTimestampToSeconds(ts: string): number {
+  const clean = ts.replace(/[[\]]/g, "").trim();
+  const parts = clean.split(":").map(Number);
+  if (parts.length === 3) {
+    return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+  }
+  if (parts.length === 2) {
+    return (parts[0] || 0) * 60 + (parts[1] || 0);
+  }
+  return 0;
+}

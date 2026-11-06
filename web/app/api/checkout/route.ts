@@ -4,13 +4,16 @@ import {
   PLATFORM_PRICING,
   grantCourseAccess,
   grantAllAccess,
+  setSubscription,
 } from "@/lib/entitlements";
 import { getPostHogClient } from "@/lib/posthog-server";
+import { getStripeClient, isStripeConfigured, isStripeTestMode } from "@/lib/stripe";
+
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
-    const user = await currentUser();
+    const [{ userId }, user] = await Promise.all([auth(), currentUser()]);
 
     const body = await req.json();
     const { courseSlug, courseTitle, tier = "course" } = body;
@@ -20,24 +23,19 @@ export async function POST(req: Request) {
     const recipientEmail =
       user?.primaryEmailAddress?.emailAddress || "learner@vertex.dev";
 
-    const hasStripeKey = Boolean(
-      process.env.STRIPE_SECRET_KEY &&
-        process.env.STRIPE_SECRET_KEY !== "mock-key" &&
-        process.env.STRIPE_SECRET_KEY.startsWith("sk_")
-    );
+    const origin =
+      req.headers.get("origin") ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "http://localhost:3000";
 
-    // If Stripe live keys configured, construct Stripe Checkout Session
-    if (hasStripeKey) {
+    const stripe = getStripeClient();
+
+    const isSubscription = tier === "all-access" || tier === "monthly";
+
+    // 1. If Stripe keys are configured (either Test or Live mode), construct Stripe Checkout Session
+    if (stripe && isStripeConfigured()) {
       try {
-        // Dynamic import of Stripe SDK if configured
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const Stripe = require("stripe");
-        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-          apiVersion: "2024-11-20.acacia",
-        });
-
         const session = await stripe.checkout.sessions.create({
-          payment_method_types: ["card"],
           line_items: [
             {
               price_data: {
@@ -45,18 +43,26 @@ export async function POST(req: Request) {
                 product_data: {
                   name:
                     tier === "all-access"
-                      ? "Vertex All-Access Engineering Pass"
+                      ? "Vertex All-Access Annual Pass"
+                      : tier === "monthly"
+                      ? "Vertex All-Access Monthly Pass"
                       : `${courseTitle || "Vertex Course"} Lifetime Access`,
                   description:
                     "Interactive video intelligence, AI Copilot, checkpoints, and verified certification.",
                 },
                 unit_amount: pricing.priceCents,
-                ...(tier === "all-access" ? { recurring: { interval: "year" } } : {}),
+                ...(isSubscription
+                  ? {
+                      recurring: {
+                        interval: tier === "monthly" ? "month" : "year",
+                      },
+                    }
+                  : {}),
               },
               quantity: 1,
             },
           ],
-          mode: tier === "all-access" ? "subscription" : "payment",
+          mode: isSubscription ? "subscription" : "payment",
           customer_email: recipientEmail,
           metadata: {
             userId: recipientUserId,
@@ -64,20 +70,37 @@ export async function POST(req: Request) {
             courseTitle: courseTitle || "",
             tier,
           },
-          success_url: `${req.headers.get("origin") || "http://localhost:3000"}/my-learning?checkout=success&course=${courseSlug || ""}`,
-          cancel_url: `${req.headers.get("origin") || "http://localhost:3000"}/courses/${courseSlug || ""}?checkout=cancelled`,
+          success_url: `${origin}/my-learning?checkout=success&course=${encodeURIComponent(courseSlug || "")}&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${origin}/courses/${encodeURIComponent(courseSlug || "")}?checkout=cancelled`,
         });
 
-        return NextResponse.json({ url: session.url, sessionId: session.id });
+        if (session.url) {
+          return NextResponse.json({
+            url: session.url,
+            sessionId: session.id,
+            mode: "stripe",
+            testMode: isStripeTestMode(),
+          });
+        }
       } catch (stripeErr) {
-        console.warn("Live Stripe checkout creation failed, falling back to instant grant:", stripeErr);
+        console.warn(
+          "Stripe Checkout Session creation failed, falling back to simulated grant:",
+          stripeErr
+        );
       }
     }
 
-    // Zero-Failure Local / Dev Mode:
-    // Instantly provisions entitlement and redirects to /my-learning with success param
+    // 2. Zero-Failure Local / Dev Mode Simulation:
+    // When no Stripe keys are configured or fallback is triggered, instantly provision access
     if (tier === "all-access") {
       grantAllAccess(recipientUserId);
+    } else if (tier === "monthly") {
+      setSubscription({
+        userId: recipientUserId,
+        plan: "monthly",
+        status: "active",
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      });
     } else if (courseSlug) {
       grantCourseAccess(recipientUserId, courseSlug);
     }
@@ -91,20 +114,27 @@ export async function POST(req: Request) {
           course_slug: courseSlug,
           tier,
           price: pricing.priceFormatted,
+          test_mode: true,
         },
       });
-    } catch {}
+    } catch {
+      // Telemetry error suppressed safely
+    }
 
-    const successRedirectUrl = `/my-learning?checkout=success&course=${courseSlug || ""}`;
+    const successRedirectUrl = `/my-learning?checkout=success&course=${encodeURIComponent(courseSlug || "")}&mock=true`;
 
     return NextResponse.json({
       url: successRedirectUrl,
       sessionId: `cs_simulated_${Date.now()}`,
       mockMode: true,
-      message: `Enrolled successfully via Vertex Instant Access!`,
+      testMode: true,
+      message: `Enrolled successfully via Vertex Instant Development Mode!`,
     });
   } catch (err: unknown) {
     console.error("Error initiating checkout:", err);
-    return NextResponse.json({ error: "Failed to initiate checkout" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to initiate checkout" },
+      { status: 500 }
+    );
   }
 }

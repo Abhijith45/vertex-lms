@@ -40,13 +40,17 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
 
   // Sync initial query when opened
   useEffect(() => {
+    let focusTimer: NodeJS.Timeout | null = null;
     if (isOpen) {
       startTransition(() => {
         setQuery(initialQuery);
         setSelectedIndex(-1);
       });
-      setTimeout(() => inputRef.current?.focus(), 50);
+      focusTimer = setTimeout(() => inputRef.current?.focus(), 50);
     }
+    return () => {
+      if (focusTimer) clearTimeout(focusTimer);
+    };
   }, [isOpen, initialQuery]);
 
   // Fetch suggestions with instant client cache & debounce
@@ -182,6 +186,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
         className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl transition-all"
         role="dialog"
         aria-modal="true"
+        aria-label="Search courses, lessons, and video moments"
       >
         {/* Search Input Bar */}
         <form
@@ -198,6 +203,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
               setSelectedIndex(-1);
             }}
             onKeyDown={handleKeyDown}
+            aria-label="Search courses, lessons, and video moments"
             placeholder="Search for lessons, topics, courses, or moments..."
             className="w-full bg-transparent text-base text-neutral-900 placeholder:text-neutral-400 outline-none font-normal"
           />
@@ -207,6 +213,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
           {query && (
             <button
               type="button"
+              aria-label="Clear search query"
               onClick={() => {
                 setQuery("");
                 setSelectedIndex(-1);
@@ -219,6 +226,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
           )}
           <button
             type="button"
+            aria-label="Close search modal"
             onClick={onClose}
             className="hidden sm:inline-flex items-center gap-1 rounded-md border border-neutral-200 bg-neutral-50 px-2 py-0.5 text-xs font-mono text-neutral-400 hover:text-neutral-600 select-none"
           >
@@ -236,9 +244,9 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                 <span>Trending Searches</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {trending.map((item, idx) => (
+                {trending.map((item) => (
                   <button
-                    key={idx}
+                    key={item}
                     type="button"
                     onMouseDown={(e) => {
                       e.preventDefault();
@@ -268,7 +276,7 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                       const isSelected = selectedIndex === idx;
                       return (
                         <li
-                          key={idx}
+                          key={kw}
                           onMouseDown={(e) => {
                             e.preventDefault();
                             handleSelectKeyword(kw);

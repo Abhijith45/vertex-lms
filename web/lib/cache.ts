@@ -46,7 +46,7 @@ export class SimpleMemoryCache<T> {
    * Stores a value in the cache with a specific or default TTL.
    * Evicts the oldest entry if capacity is exceeded.
    */
-  set(key: string, value: T, ttlMs?: number): void {
+  put(key: string, value: T, ttlMs?: number): void {
     const ttl = ttlMs ?? this.defaultTtlMs;
     const expiresAt = Date.now() + ttl;
 
@@ -62,6 +62,13 @@ export class SimpleMemoryCache<T> {
     }
 
     this.store.set(key, { value, expiresAt });
+  }
+
+  /**
+   * Alias for put() to maintain Map-like interface compatibility.
+   */
+  set(key: string, value: T, ttlMs?: number): void {
+    this.put(key, value, ttlMs);
   }
 
   /**
