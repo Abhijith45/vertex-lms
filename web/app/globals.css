@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ──────────────────────────────────────────────────────────
    01  COLORS
    02  TYPOGRAPHY (font families)
@@ -53,10 +55,22 @@
    BASE
    ────────────────────────────────────────────────────────── */
 
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
   background: var(--color-white);
   color: var(--color-neutral-900);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dark body {
+  background: #090D16;
+  color: #F8FAFC;
 }
 
 /* ──────────────────────────────────────────────────────────
@@ -70,6 +84,7 @@ body {
   line-height: 3.5rem;    /* 56px */
   font-weight: 700;
   letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 
 /* Display 2 — Playfair Display 36/44 Bold — Section titles */
@@ -78,7 +93,8 @@ body {
   font-size: 2.25rem;     /* 36px */
   line-height: 2.75rem;   /* 44px */
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
 }
 
 /* Heading 1 — Inter 28/36 Semi Bold — Card titles */
@@ -87,6 +103,8 @@ body {
   font-size: 1.75rem;     /* 28px */
   line-height: 2.25rem;   /* 36px */
   font-weight: 600;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 /* Heading 2 — Inter 22/30 Semi Bold — Sub section */
@@ -95,6 +113,8 @@ body {
   font-size: 1.375rem;    /* 22px */
   line-height: 1.875rem;  /* 30px */
   font-weight: 600;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 /* Heading 3 — Inter 18/26 Medium — Small titles */
@@ -103,6 +123,7 @@ body {
   font-size: 1.125rem;    /* 18px */
   line-height: 1.625rem;  /* 26px */
   font-weight: 500;
+  letter-spacing: -0.005em;
 }
 
 /* Body Large — Inter 16/24 Regular — Body copy */

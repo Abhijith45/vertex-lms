@@ -11,12 +11,34 @@ export const getCoursesQuery = defineQuery(`
     price,
     popular,
     studentCount,
+    "modulesCount": count(modules),
+    modules[]{
+      title,
+      summary,
+      lessons[]->{
+        _id,
+        duration
+      }
+    },
     instructor->{
       name,
       "slug": slug.current,
       photo,
       expertise
+    },
+    category->{
+      title,
+      "slug": slug.current
     }
+  }
+`)
+
+export const getCategoriesQuery = defineQuery(`
+  *[_type == "category"] | order(title asc) {
+    _id,
+    title,
+    "slug": slug.current,
+    description
   }
 `)
 
@@ -53,7 +75,7 @@ export const getCourseBySlugQuery = defineQuery(`
         duration,
         freePreview,
         videoUrl,
-        poster
+        "poster": coalesce(poster, thumbnail)
       }
     }
   }
@@ -65,7 +87,7 @@ export const getLessonBySlugQuery = defineQuery(`
     title,
     "slug": slug.current,
     videoUrl,
-    poster,
+    "poster": coalesce(poster, thumbnail),
     duration,
     freePreview,
     studentCount,
@@ -73,5 +95,40 @@ export const getLessonBySlugQuery = defineQuery(`
     keyPoints,
     proTip,
     resources
+  }
+`)
+
+export const getLessonWithCourseQuery = defineQuery(`
+  *[_type == "lesson" && slug.current == $slug][0] {
+    _id,
+    title,
+    "slug": slug.current,
+    videoUrl,
+    "poster": coalesce(poster, thumbnail),
+    duration,
+    freePreview,
+    studentCount,
+    notes,
+    keyPoints,
+    proTip,
+    resources,
+    "course": *[_type == "course" && references(^._id)][0] {
+      _id,
+      title,
+      "slug": slug.current,
+      level,
+      coverImage,
+      modules[]{
+        title,
+        summary,
+        lessons[]->{
+          _id,
+          title,
+          "slug": slug.current,
+          duration,
+          freePreview
+        }
+      }
+    }
   }
 `)

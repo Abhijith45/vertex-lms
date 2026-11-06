@@ -5,13 +5,28 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "react-hooks/set-state-in-effect": "warn",
+      "@next/next/no-img-element": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    "node_modules/**",
+    ".agents/**",
+    ".claude/**",
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "test/**",
   ]),
 ]);
 
