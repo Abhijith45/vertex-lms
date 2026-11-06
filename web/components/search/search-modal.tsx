@@ -102,16 +102,21 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
     return () => clearTimeout(timer);
   }, [query, isOpen]);
 
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
   // Close on Escape or click outside
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && isOpen) {
-        onClose();
+        onCloseRef.current();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -275,26 +280,28 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                     {keywords.map((kw, idx) => {
                       const isSelected = selectedIndex === idx;
                       return (
-                        <li
-                          key={kw}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleSelectKeyword(kw);
-                          }}
-                          onClick={() => handleSelectKeyword(kw)}
-                          className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-sm cursor-pointer transition-colors ${
-                            isSelected
-                              ? "bg-primary-50 text-primary-600 font-medium"
-                              : "text-neutral-800 hover:bg-neutral-50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <Search className="h-4 w-4 text-neutral-400 shrink-0" />
-                            <span>{kw}</span>
-                          </div>
-                          <span className="flex items-center gap-1 text-xs text-neutral-400">
-                            Search <CornerDownLeft className="h-3 w-3" />
-                          </span>
+                        <li key={kw}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleSelectKeyword(kw);
+                            }}
+                            onClick={() => handleSelectKeyword(kw)}
+                            className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-sm cursor-pointer transition-colors text-left ${
+                              isSelected
+                                ? "bg-primary-50 text-primary-600 font-medium"
+                                : "text-neutral-800 hover:bg-neutral-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <Search className="h-4 w-4 text-neutral-400 shrink-0" />
+                              <span>{kw}</span>
+                            </div>
+                            <span className="flex items-center gap-1 text-xs text-neutral-400">
+                              Search <CornerDownLeft className="h-3 w-3" />
+                            </span>
+                          </button>
                         </li>
                       );
                     })}
@@ -313,36 +320,38 @@ export function SearchModal({ isOpen, onClose, initialQuery = "" }: SearchModalP
                       const overallIndex = keywords.length + idx;
                       const isSelected = selectedIndex === overallIndex;
                       return (
-                        <li
-                          key={course.slug || idx}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            handleSelectCourse(course.slug);
-                          }}
-                          onClick={() => handleSelectCourse(course.slug)}
-                          className={`flex items-center justify-between rounded-xl p-3 text-sm cursor-pointer border transition-all ${
-                            isSelected
-                              ? "border-primary-300 bg-primary-50/50 shadow-xs"
-                              : "border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600">
-                              <BookOpen className="h-4 w-4" />
+                        <li key={course.slug}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleSelectCourse(course.slug);
+                            }}
+                            onClick={() => handleSelectCourse(course.slug)}
+                            className={`w-full flex items-center justify-between rounded-xl p-3 text-sm cursor-pointer border transition-all text-left ${
+                              isSelected
+                                ? "border-primary-300 bg-primary-50/50 shadow-xs"
+                                : "border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-neutral-100 text-neutral-600">
+                                <BookOpen className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-neutral-900 leading-tight">
+                                  {course.title}
+                                </p>
+                                <p className="text-xs text-neutral-500 mt-0.5">
+                                  {course.category}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-semibold text-neutral-900 leading-tight">
-                                {course.title}
-                              </p>
-                              <p className="text-xs text-neutral-500 mt-0.5">
-                                {course.category}
-                              </p>
+                            <div className="flex items-center gap-1 text-xs font-medium text-primary-500">
+                              <span>Open course</span>
+                              <ArrowRight className="h-3.5 w-3.5" />
                             </div>
-                          </div>
-                          <div className="flex items-center gap-1 text-xs font-medium text-primary-500">
-                            <span>Open course</span>
-                            <ArrowRight className="h-3.5 w-3.5" />
-                          </div>
+                          </button>
                         </li>
                       );
                     })}

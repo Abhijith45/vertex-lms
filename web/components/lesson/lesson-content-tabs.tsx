@@ -242,8 +242,8 @@ export function LessonContentTabs({
             </h3>
 
             <div className="space-y-3.5">
-              {points.map((pt, idx) => (
-                <div key={idx} className="flex items-start gap-3.5 text-sm sm:text-base text-neutral-700 dark:text-neutral-300">
+              {points.map((pt) => (
+                <div key={pt} className="flex items-start gap-3.5 text-sm sm:text-base text-neutral-700 dark:text-neutral-300">
                   <CheckCircle2 className="h-5 w-5 text-[#E05A36] shrink-0 mt-0.5" strokeWidth={1.75} />
                   <span>{pt}</span>
                 </div>
@@ -280,9 +280,9 @@ export function LessonContentTabs({
               </h2>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {resourceList.map((res, idx) => (
+                {resourceList.map((res) => (
                   <a
-                    key={res._key || idx}
+                    key={res._key || res.url || res.title}
                     href={res.url}
                     target="_blank"
                     rel="noopener noreferrer"

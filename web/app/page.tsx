@@ -161,9 +161,9 @@ export default async function HomePage() {
             {/* Course Cards Grid */}
             {displayCourses.length > 0 ? (
               <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {displayCourses.map((c, idx) => (
+                {displayCourses.map((c) => (
                   <HomeCourseCard
-                    key={c.slug || idx}
+                    key={c.slug || c.title}
                     href={`/courses/${c.slug}`}
                     icon={<CourseIcon slug={c.slug} title={c.title} />}
                     title={c.title}

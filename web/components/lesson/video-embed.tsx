@@ -569,8 +569,8 @@ export function VideoEmbed({
     startHideTimer();
   };
 
-  const handleRewind10 = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleRewind10 = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (!playerInstanceRef.current) return;
     const newTime = clampSeekTime(currentTime - 10, duration);
     setCurrentTime(newTime);
@@ -579,8 +579,8 @@ export function VideoEmbed({
     startHideTimer();
   };
 
-  const handleForward10 = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleForward10 = (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     if (!playerInstanceRef.current) return;
     const newTime = clampSeekTime(currentTime + 10, duration);
     setCurrentTime(newTime);
@@ -761,9 +761,10 @@ export function VideoEmbed({
           </div>
 
           {/* CLICK TO TOGGLE PLAY OVERLAY */}
-          <div
+          <button
+            type="button"
             onClick={togglePlay}
-            className="absolute inset-0 z-10 cursor-pointer"
+            className="absolute inset-0 z-10 cursor-pointer w-full h-full bg-transparent border-0"
             aria-label={isPlaying ? "Pause video" : "Play video"}
           />
 
@@ -794,7 +795,23 @@ export function VideoEmbed({
         {/* ── Progress Scrubber Bar ── */}
         <div
           ref={progressBarRef}
+          role="slider"
+          tabIndex={0}
+          aria-label="Video scrubber"
+          aria-valuemin={0}
+          aria-valuemax={Math.floor(effectiveDuration)}
+          aria-valuenow={Math.floor(currentTime)}
+          aria-valuetext={formatVideoTime(currentTime)}
           onClick={handleSeek}
+          onKeyDown={(e) => {
+            if (e.key === "ArrowRight") {
+              e.preventDefault();
+              handleForward10();
+            } else if (e.key === "ArrowLeft") {
+              e.preventDefault();
+              handleRewind10();
+            }
+          }}
           onMouseDown={(e) => {
             e.stopPropagation();
             setIsDraggingProgress(true);
@@ -1050,18 +1067,19 @@ export function VideoEmbed({
   ) : (
     <div className="absolute inset-0 h-full w-full">
       {!accessState.canPlay && (
-        <div
+        <button
+          type="button"
           onClick={() => {
             setModalMode(accessState.promptModal || "AUTH");
             setShowPromptModal(true);
           }}
-          className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-xs cursor-pointer group"
+          className="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-xs cursor-pointer group w-full h-full border-0"
           aria-label="Play video"
         >
           <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-neutral-900/85 group-hover:bg-neutral-900 border border-neutral-700/60 text-white shadow-2xl transition-all duration-200 group-hover:scale-108">
             <Play className="h-7 w-7 sm:h-9 sm:w-9 fill-white text-white translate-x-0.5" />
           </div>
-        </div>
+        </button>
       )}
       <iframe
         src={parsed.embedUrl}

@@ -272,7 +272,7 @@ I am actively synchronized with your video playback second in real-time. Wheneve
     // Regex splits by both [MM:SS] timestamps and **bold** markdown
     const tokens = text.split(/(\[\d{1,2}:\d{2}(?::\d{2})?\]|\*\*[^*]+\*\*)/g);
 
-    return tokens.map((token, idx) => {
+    return tokens.map((token) => {
       // Check timestamp: [01:23] or [1:23]
       const tsMatch = token.match(/^\[(\d{1,2}:\d{2}(?::\d{2})?)\]$/);
       if (tsMatch) {
@@ -281,7 +281,7 @@ I am actively synchronized with your video playback second in real-time. Wheneve
 
         return (
           <button
-            key={idx}
+            key={`ts-${rawTs}`}
             type="button"
             onClick={() => {
               seekTo(secs);
@@ -293,6 +293,7 @@ I am actively synchronized with your video playback second in real-time. Wheneve
             }}
             className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-1 my-0.5 rounded-md font-mono text-[11px] font-semibold bg-[#E05A36]/10 text-[#E05A36] hover:bg-[#E05A36] hover:text-white transition-all cursor-pointer align-baseline shadow-xs"
             title={`Jump video to ${rawTs}`}
+            aria-label={`Jump video to ${rawTs}`}
           >
             <Play className="h-2.5 w-2.5 fill-current" />
             <span>{rawTs}</span>
@@ -302,14 +303,15 @@ I am actively synchronized with your video playback second in real-time. Wheneve
 
       // Check bold
       if (token.startsWith("**") && token.endsWith("**")) {
+        const boldText = token.slice(2, -2);
         return (
-          <strong key={idx} className="font-semibold text-neutral-900 dark:text-neutral-100">
-            {token.slice(2, -2)}
+          <strong key={`b-${boldText}`} className="font-semibold text-neutral-900 dark:text-neutral-100">
+            {boldText}
           </strong>
         );
       }
 
-      return <span key={idx}>{token}</span>;
+      return <span key={`t-${token}`}>{token}</span>;
     });
   };
 

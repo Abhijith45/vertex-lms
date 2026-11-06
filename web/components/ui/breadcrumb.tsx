@@ -20,7 +20,7 @@ export function Breadcrumb({ items, className = "" }: BreadcrumbProps) {
     <nav aria-label="Breadcrumb" className={className}>
       <ol className="flex items-center gap-1.5 text-sm">
         {items.map((item, i) => (
-          <li key={i} className="inline-flex items-center gap-1.5">
+          <li key={item.href || item.label} className="inline-flex items-center gap-1.5">
             {i > 0 && (
               <ChevronRight className="h-3.5 w-3.5 text-neutral-300" />
             )}

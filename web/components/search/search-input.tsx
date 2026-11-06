@@ -248,24 +248,26 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
               </div>
               <ul className="space-y-0.5">
                 {keywords.map((kw, idx) => (
-                  <li
-                    key={kw}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      handleSelectKeyword(kw);
-                    }}
-                    onClick={() => handleSelectKeyword(kw)}
-                    className={`flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors ${
-                      idx === selectedIndex
-                        ? "bg-primary-50 dark:bg-primary-950/40 font-medium text-primary-700 dark:text-primary-300"
-                        : "text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800/60"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Search className="h-3.5 w-3.5 text-gray-400 dark:text-neutral-500" />
-                      <span>{kw}</span>
-                    </div>
-                    <span className="text-[11px] text-gray-400 dark:text-neutral-500">Search</span>
+                  <li key={kw}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectKeyword(kw);
+                      }}
+                      onClick={() => handleSelectKeyword(kw)}
+                      className={`w-full flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 text-sm transition-colors text-left ${
+                        idx === selectedIndex
+                          ? "bg-primary-50 dark:bg-primary-950/40 font-medium text-primary-700 dark:text-primary-300"
+                          : "text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800/60"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <Search className="h-3.5 w-3.5 text-gray-400 dark:text-neutral-500" />
+                        <span>{kw}</span>
+                      </div>
+                      <span className="text-[11px] text-gray-400 dark:text-neutral-500">Search</span>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -283,34 +285,36 @@ export function SearchInput({ initialQuery = "" }: { initialQuery?: string }) {
                   const overallIndex = keywords.length + idx;
                   const isSelected = selectedIndex === overallIndex;
                   return (
-                    <li
-                      key={course.slug || idx}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        handleSelectCourse(course.slug);
-                      }}
-                      onClick={() => handleSelectCourse(course.slug)}
-                      className={`flex cursor-pointer items-center justify-between rounded-xl p-2.5 text-sm transition-all border ${
-                        isSelected
-                          ? "border-primary-300 dark:border-primary-700 bg-primary-50/50 dark:bg-primary-950/30"
-                          : "border-transparent hover:border-gray-200 dark:hover:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800/60"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-300">
-                          <BookOpen className="h-4 w-4" />
+                    <li key={course.slug}>
+                      <button
+                        type="button"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          handleSelectCourse(course.slug);
+                        }}
+                        onClick={() => handleSelectCourse(course.slug)}
+                        className={`w-full flex cursor-pointer items-center justify-between rounded-xl p-2.5 text-sm transition-all border text-left ${
+                          isSelected
+                            ? "border-primary-300 dark:border-primary-700 bg-primary-50/50 dark:bg-primary-950/30"
+                            : "border-transparent hover:border-gray-200 dark:hover:border-neutral-700 hover:bg-gray-50 dark:hover:bg-neutral-800/60"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-300">
+                            <BookOpen className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 dark:text-neutral-100 leading-tight">
+                              {course.title}
+                            </p>
+                            <p className="text-[11px] text-gray-500 dark:text-neutral-400">{course.category}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-semibold text-gray-900 dark:text-neutral-100 leading-tight">
-                            {course.title}
-                          </p>
-                          <p className="text-[11px] text-gray-500 dark:text-neutral-400">{course.category}</p>
+                        <div className="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 font-medium">
+                          <span>View</span>
+                          <ArrowRight className="h-3.5 w-3.5" />
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 font-medium">
-                        <span>View</span>
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </div>
+                      </button>
                     </li>
                   );
                 })}

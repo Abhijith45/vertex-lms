@@ -29,12 +29,18 @@ export function LessonSidebar({
 }: LessonSidebarProps) {
   const completedSet = new Set(completedLessonIds);
   // State for expanded module indices (active module open by default)
-  const [expandedIndices, setExpandedIndices] = useState<number[]>([activeModuleIndex]);
+  const [expandedIndices, setExpandedIndices] = useState<Set<number>>(() => new Set([activeModuleIndex]));
 
   const toggleModule = (idx: number) => {
-    setExpandedIndices((prev) =>
-      prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
-    );
+    setExpandedIndices((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) {
+        next.delete(idx);
+      } else {
+        next.add(idx);
+      }
+      return next;
+    });
   };
 
   const modules = course.modules || [];
@@ -78,7 +84,7 @@ export function LessonSidebar({
         {/* Module list */}
         <div className="space-y-2 mt-1">
           {modules.map((module, mIdx) => {
-            const isExpanded = expandedIndices.includes(mIdx);
+            const isExpanded = expandedIndices.has(mIdx);
             const isActiveModule = mIdx === activeModuleIndex;
             const isCompleted =
               Boolean(module.lessons &&

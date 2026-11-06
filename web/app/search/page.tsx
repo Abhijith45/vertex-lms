@@ -54,17 +54,23 @@ function SearchContent() {
   const [sortBy, setSortBy] = useState<"relevant" | "title_asc" | "course">("relevant");
 
   useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout | undefined;
     let isMounted = true;
+    let willRetry = false;
 
     async function fetchResults() {
       if (!query.trim()) {
-        setResults(null);
+        if (isMounted) {
+          setResults(null);
+          setIsLoading(false);
+        }
         return;
       }
-      setIsLoading(true);
-      setError(null);
-      setCurrentPage(1); // Reset to page 1 on new search
+      if (isMounted) {
+        setIsLoading(true);
+        setError(null);
+        setCurrentPage(1); // Reset to page 1 on new search
+      }
       try {
         const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
         if (!res.ok) {
@@ -74,6 +80,7 @@ function SearchContent() {
           if (res.status === 503 && errData.status === "waking_up") {
             if (isMounted) {
               setIsWakingUp(true);
+              willRetry = true;
               timeoutId = setTimeout(fetchResults, 5000);
             }
             return; // Return early, don't set loading to false or throw error
@@ -108,7 +115,7 @@ function SearchContent() {
           setIsWakingUp(false);
         }
       } finally {
-        if (isMounted && !timeoutId) {
+        if (isMounted && !willRetry) {
           setIsLoading(false);
         }
       }
@@ -118,7 +125,9 @@ function SearchContent() {
 
     return () => {
       isMounted = false;
-      clearTimeout(timeoutId);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
     };
   }, [query]);
 
@@ -295,23 +304,29 @@ function SearchContent() {
                 <div className="w-full space-y-6">
                   {/* 2-Column Desktop Grid for Result Cards */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {currentItems.map((item, idx) => (
-                      <div key={idx} className="h-full w-full">
-                        {item.type === "video" ? (
-                          <VideoResultCard
-                            videoMoment={item.data}
-                            query={query}
-                            positionIndex={startIndex + idx + 1}
-                          />
-                        ) : (
-                          <LessonResultCard
-                            lesson={item.data}
-                            query={query}
-                            positionIndex={startIndex + idx + 1}
-                          />
-                        )}
-                      </div>
-                    ))}
+                    {currentItems.map((item, idx) => {
+                      const itemKey =
+                        item.type === "video"
+                          ? `video-${item.data.lessonSlug}-${item.data.startSeconds}`
+                          : `lesson-${item.data.slug}`;
+                      return (
+                        <div key={itemKey} className="h-full w-full">
+                          {item.type === "video" ? (
+                            <VideoResultCard
+                              videoMoment={item.data}
+                              query={query}
+                              positionIndex={startIndex + idx + 1}
+                            />
+                          ) : (
+                            <LessonResultCard
+                              lesson={item.data}
+                              query={query}
+                              positionIndex={startIndex + idx + 1}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Pagination Controls */}

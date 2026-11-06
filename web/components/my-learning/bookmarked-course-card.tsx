@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
 import { ArrowRight, Clock, BookOpen, Trash2 } from "lucide-react";
 import { CourseIcon } from "@/components/home/course-icons";
@@ -29,11 +29,14 @@ export function BookmarkedCourseCard({
   const [isRemoving, setIsRemoving] = useState(false);
   const [isRemoved, setIsRemoved] = useState(false);
 
+  const isRemovingRef = useRef(false);
+
   const handleRemove = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (isRemoving) return;
+    if (isRemoving || isRemovingRef.current) return;
+    isRemovingRef.current = true;
 
     setIsRemoving(true);
     // Optimistic removal
@@ -67,6 +70,7 @@ export function BookmarkedCourseCard({
       // Revert if request failed
       setIsRemoved(false);
     } finally {
+      isRemovingRef.current = false;
       setIsRemoving(false);
     }
   };

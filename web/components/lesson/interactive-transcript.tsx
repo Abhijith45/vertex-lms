@@ -222,10 +222,9 @@ export function InteractiveTranscript({
 
             return (
               <div
-                key={cue.id || idx}
+                key={cue.id || `cue-${cue.start}-${cue.text.slice(0, 10)}`}
                 ref={isOriginalActive ? activeItemRef : null}
-                onClick={() => seekTo(cue.start)}
-                className={`group relative p-3 sm:p-3.5 rounded-xl transition-all cursor-pointer flex items-start gap-3.5 ${
+                className={`group relative p-3 sm:p-3.5 rounded-xl transition-all flex items-start gap-3.5 ${
                   isOriginalActive
                     ? "bg-[#FFF5EE]/70 dark:bg-[#E05A36]/10 border border-[#E05A36]/30 shadow-2xs"
                     : "hover:bg-neutral-50 dark:hover:bg-neutral-800/40 border border-transparent"
@@ -234,14 +233,12 @@ export function InteractiveTranscript({
                 {/* Timestamp Seek Button */}
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    seekTo(cue.start);
-                  }}
+                  onClick={() => seekTo(cue.start)}
+                  aria-label={`Jump video to ${formatVideoTime(cue.start)}`}
                   className={`shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-mono font-medium transition-colors cursor-pointer ${
                     isOriginalActive
                       ? "bg-[#E05A36] text-white shadow-2xs"
-                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 group-hover:bg-[#E05A36]/15 group-hover:text-[#E05A36]"
+                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-[#E05A36]/15 hover:text-[#E05A36]"
                   }`}
                 >
                   <Volume2 className="h-3 w-3" />
@@ -249,7 +246,12 @@ export function InteractiveTranscript({
                 </button>
 
                 {/* Content */}
-                <div className="flex-1 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => seekTo(cue.start)}
+                  className="flex-1 min-w-0 text-left cursor-pointer focus:outline-none"
+                  aria-label={`Seek to ${formatVideoTime(cue.start)}`}
+                >
                   {cue.chapter && (
                     <div className="text-[11px] font-semibold uppercase tracking-wider text-[#E05A36] mb-1">
                       {cue.chapter}
@@ -264,7 +266,7 @@ export function InteractiveTranscript({
                   >
                     {cue.text}
                   </p>
-                </div>
+                </button>
 
                 {/* Copy / Jump Action */}
                 <div className="shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">

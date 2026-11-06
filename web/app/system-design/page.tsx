@@ -275,25 +275,43 @@ export default function DesignSystem() {
             <div>
               <h4 className="text-body font-semibold text-neutral-900 mb-3">Outline Style</h4>
               <div className="flex flex-wrap gap-4">
-                {[Bell, Search, Play, FileText, Monitor, Bookmark, BarChart3, Clock, Smile, ArrowRight].map(
-                  (IconComp, i) => (
-                    <div key={i} className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-sm)] border border-neutral-200">
-                      <Icon icon={IconComp} size={20} variant="outline" className="text-neutral-700" />
-                    </div>
-                  )
-                )}
+                {[
+                  { name: "bell", comp: Bell },
+                  { name: "search", comp: Search },
+                  { name: "play", comp: Play },
+                  { name: "file", comp: FileText },
+                  { name: "monitor", comp: Monitor },
+                  { name: "bookmark", comp: Bookmark },
+                  { name: "chart", comp: BarChart3 },
+                  { name: "clock", comp: Clock },
+                  { name: "smile", comp: Smile },
+                  { name: "arrow", comp: ArrowRight },
+                ].map(({ name, comp: IconComp }) => (
+                  <div key={name} className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-sm)] border border-neutral-200">
+                    <Icon icon={IconComp} size={20} variant="outline" className="text-neutral-700" />
+                  </div>
+                ))}
               </div>
             </div>
             <div>
               <h4 className="text-body font-semibold text-neutral-900 mb-3">Filled Style</h4>
               <div className="flex flex-wrap gap-4">
-                {[Bell, Search, Play, FileText, Monitor, Bookmark, BarChart3, Clock, Smile, User].map(
-                  (IconComp, i) => (
-                    <div key={i} className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-sm)] border border-neutral-200">
-                      <Icon icon={IconComp} size={20} variant="filled" className="text-neutral-700" />
-                    </div>
-                  )
-                )}
+                {[
+                  { name: "bell", comp: Bell },
+                  { name: "search", comp: Search },
+                  { name: "play", comp: Play },
+                  { name: "file", comp: FileText },
+                  { name: "monitor", comp: Monitor },
+                  { name: "bookmark", comp: Bookmark },
+                  { name: "chart", comp: BarChart3 },
+                  { name: "clock", comp: Clock },
+                  { name: "smile", comp: Smile },
+                  { name: "user", comp: User },
+                ].map(({ name, comp: IconComp }) => (
+                  <div key={name} className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-sm)] border border-neutral-200">
+                    <Icon icon={IconComp} size={20} variant="filled" className="text-neutral-700" />
+                  </div>
+                ))}
               </div>
             </div>
           </div>

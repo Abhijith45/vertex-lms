@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   MessageSquare,
   ThumbsUp,
@@ -48,23 +48,28 @@ export function LessonDiscussion({
   const [replyContent, setReplyContent] = useState("");
   const [isReplying, setIsReplying] = useState(false);
 
-  const fetchThreads = async (sort: DiscussionSort) => {
+  const fetchThreads = useCallback(async (sort: DiscussionSort) => {
+    let isMounted = true;
     try {
       setIsLoading(true);
       const res = await fetch(`/api/discussions?lessonSlug=${lessonSlug}&sort=${sort}`);
       if (!res.ok) throw new Error("Failed to fetch discussions");
       const data = await res.json();
-      setThreads(data.threads || []);
+      if (isMounted) {
+        setThreads(data.threads || []);
+      }
     } catch (err) {
       console.error("Error loading discussions:", err);
     } finally {
-      setIsLoading(false);
+      if (isMounted) {
+        setIsLoading(false);
+      }
     }
-  };
+  }, [lessonSlug]);
 
   useEffect(() => {
     fetchThreads(sortBy);
-  }, [lessonSlug, sortBy]);
+  }, [fetchThreads, sortBy]);
 
   const handleSortChange = (newSort: DiscussionSort) => {
     setSortBy(newSort);
@@ -268,28 +273,32 @@ export function LessonDiscussion({
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+            <label htmlFor="discussion-question-title" className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
               Question Title
             </label>
             <input
+              id="discussion-question-title"
               type="text"
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              aria-label="Question Title"
               placeholder="e.g. Why does request memoization not apply to POST requests?"
               className="w-full px-3.5 py-2 rounded-xl text-xs sm:text-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-[#E05A36]/40 focus:border-[#E05A36] text-neutral-900 dark:text-neutral-100"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
+            <label htmlFor="discussion-question-details" className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1">
               Details & Context
             </label>
             <textarea
+              id="discussion-question-details"
               required
               rows={3}
               value={content}
               onChange={(e) => setContent(e.target.value)}
+              aria-label="Details & Context"
               placeholder="Explain what you are trying to understand or what behavior you observed..."
               className="w-full px-3.5 py-2 rounded-xl text-xs sm:text-sm bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 focus:outline-none focus:ring-2 focus:ring-[#E05A36]/40 focus:border-[#E05A36] text-neutral-900 dark:text-neutral-100"
             />
@@ -491,6 +500,7 @@ export function LessonDiscussion({
                       type="text"
                       value={replyContent}
                       onChange={(e) => setReplyContent(e.target.value)}
+                      aria-label="Write a helpful reply"
                       placeholder="Write a helpful reply..."
                       className="flex-1 px-3.5 py-2 rounded-xl text-xs bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-1 focus:ring-[#E05A36]"
                     />

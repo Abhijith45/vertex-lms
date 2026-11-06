@@ -197,9 +197,9 @@ export function CertificateView({ certificate, isValid }: CertificateViewProps) 
               Verified Technical Competencies
             </p>
             <div className="flex flex-wrap justify-center gap-2 max-w-2xl mx-auto">
-              {certificate.skills.map((skill, idx) => (
+              {certificate.skills.map((skill) => (
                 <span
-                  key={idx}
+                  key={skill}
                   className="px-2.5 py-1 rounded-lg text-[11px] font-medium bg-neutral-100 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 border border-neutral-200/60 dark:border-neutral-700/60 print:border print:bg-white"
                 >
                   {skill}

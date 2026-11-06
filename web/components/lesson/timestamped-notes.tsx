@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useId } from "react";
+import React, { useState, useEffect, useCallback, useId, useSyncExternalStore } from "react";
 import {
   Clock,
   Plus,
@@ -35,33 +35,33 @@ export function TimestampedNotes({
   courseTitle = "Vertex Learning",
 }: TimestampedNotesProps) {
   const { currentTime, seekTo } = useLessonPlayback();
-  const [notes, setNotes] = useState<LessonNote[]>([]);
+  const isLoaded = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+
+  const [notes, setNotes] = useState<LessonNote[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = localStorage.getItem(`vertex_notes_${lessonSlug}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {
+      console.warn("Could not load initial notes from localStorage:", e);
+    }
+    return [];
+  });
   const [isEditingId, setIsEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
   const [newNoteText, setNewNoteText] = useState("");
   const [isComposing, setIsComposing] = useState(false);
   const [capturedTimestamp, setCapturedTimestamp] = useState<number>(0);
   const [copiedExport, setCopiedExport] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   const storageKey = `vertex_notes_${lessonSlug}`;
-
-  // 1. Load notes from localStorage on mount
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(storageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setNotes(parsed);
-        }
-      }
-    } catch (e) {
-      console.warn("Could not load notes from localStorage:", e);
-    } finally {
-      setIsLoaded(true);
-    }
-  }, [storageKey]);
 
   // 2. Persist notes to localStorage
   const saveNotes = useCallback(

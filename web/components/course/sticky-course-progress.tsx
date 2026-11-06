@@ -50,16 +50,12 @@ export function StickyCourseProgress({
 
         {/* Center: Desktop Progress Bar */}
         <div className="hidden sm:block flex-1 max-w-md mx-6">
-          <div className="h-2 w-full bg-neutral-200/80 dark:bg-neutral-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-[#E05A36] rounded-full transition-all duration-500"
-              style={{ width: `${progressPercentage}%` }}
-              role="progressbar"
-              aria-valuenow={progressPercentage}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            />
-          </div>
+          <progress
+            className="h-2 w-full appearance-none rounded-full overflow-hidden [&::-webkit-progress-bar]:bg-neutral-200/80 dark:[&::-webkit-progress-bar]:bg-neutral-800 [&::-webkit-progress-value]:bg-[#E05A36] [&::-moz-progress-bar]:bg-[#E05A36]"
+            value={progressPercentage}
+            max={100}
+            aria-label="Course progress percentage"
+          />
         </div>
 
         {/* Right: Continue / Start Learning CTA */}

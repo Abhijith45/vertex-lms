@@ -37,14 +37,20 @@ export function CourseContentAccordion({
 }: CourseContentAccordionProps) {
   const completedLessonSet = new Set(completedLessonIds);
   // Set first module open by default or track open modules
-  const [openIndices, setOpenIndices] = useState<number[]>([]);
+  const [openIndices, setOpenIndices] = useState<Set<number>>(() => new Set());
   const [showAll, setShowAll] = useState<boolean>(false);
 
   const toggleModule = (index: number, moduleTitle: string) => {
-    const isCurrentlyOpen = openIndices.includes(index);
-    setOpenIndices((prev) =>
-      isCurrentlyOpen ? prev.filter((i) => i !== index) : [...prev, index]
-    );
+    const isCurrentlyOpen = openIndices.has(index);
+    setOpenIndices((prev) => {
+      const next = new Set(prev);
+      if (isCurrentlyOpen) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
     if (!isCurrentlyOpen) {
       posthog.capture("course_accordion_module_expanded", {
         module_index: index + 1,
@@ -72,8 +78,9 @@ export function CourseContentAccordion({
 
       {/* Module List */}
       <div className="space-y-3">
-        {visibleModules.map((module, idx) => {
-          const isOpen = openIndices.includes(idx);
+        {visibleModules.map((module) => {
+          const idx = modules.indexOf(module);
+          const isOpen = openIndices.has(idx);
           const moduleNumber = idx + 1;
 
           // Compute module duration from lessons if available
@@ -86,7 +93,7 @@ export function CourseContentAccordion({
 
           return (
             <div
-              key={idx}
+              key={module.title}
               className="group rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 transition-all duration-200 hover:border-neutral-300 dark:hover:border-neutral-700 shadow-2xs overflow-hidden"
             >
               {/* Module Header / Trigger */}

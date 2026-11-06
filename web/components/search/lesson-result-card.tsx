@@ -94,9 +94,9 @@ export function LessonResultCard({ lesson, query, positionIndex }: LessonResultC
           {/* Key points tags (compact single pill) */}
           {previewPoints.length > 0 && (
             <div className="mt-1 flex flex-wrap gap-1.5">
-              {previewPoints.slice(0, 1).map((point, idx) => (
+              {previewPoints.slice(0, 1).map((point) => (
                 <span
-                  key={idx}
+                  key={point}
                   className="inline-flex items-center gap-1.5 rounded-md bg-neutral-100 dark:bg-neutral-800/80 px-2 py-0.5 text-[11px] text-neutral-600 dark:text-neutral-300 truncate max-w-full"
                 >
                   <span className="h-1 w-1 rounded-full bg-primary-500 shrink-0" />
