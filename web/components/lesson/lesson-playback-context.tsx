@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useRef, useCallback } from "react";
+import React, { createContext, useContext, useState, useRef, useCallback, useMemo } from "react";
 
 interface LessonPlaybackContextType {
   currentTime: number;
@@ -48,17 +48,20 @@ export function LessonPlaybackProvider({ children }: { children: React.ReactNode
     []
   );
 
+  const contextValue = useMemo(
+    () => ({
+      currentTime,
+      duration,
+      isPlaying,
+      seekTo,
+      registerSeekHandler,
+      updatePlaybackState,
+    }),
+    [currentTime, duration, isPlaying, seekTo, registerSeekHandler, updatePlaybackState]
+  );
+
   return (
-    <LessonPlaybackContext.Provider
-      value={{
-        currentTime,
-        duration,
-        isPlaying,
-        seekTo,
-        registerSeekHandler,
-        updatePlaybackState,
-      }}
-    >
+    <LessonPlaybackContext.Provider value={contextValue}>
       {children}
     </LessonPlaybackContext.Provider>
   );

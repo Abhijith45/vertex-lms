@@ -25,6 +25,7 @@ export interface ResolvedCurriculumLocation {
   moduleNumber: number; // 1-based (e.g. 5)
   lessonIndexInModule: number; // 0-based
   lessonNumberInModule: number; // 1-based (e.g. 1)
+  overallLessonIndex: number; // 1-based overall position in course (e.g. 1, 2, 3...)
   lessonLabel: string; // e.g. "Lesson 5.1"
   totalModules: number;
   totalLessons: number;
@@ -88,12 +89,14 @@ export function resolveCurriculum(
 
   const moduleNum = foundModuleIdx >= 0 ? foundModuleIdx + 1 : 1;
   const lessonNum = foundLessonIdx >= 0 ? foundLessonIdx + 1 : 1;
+  const overallIndex = currentIndex >= 0 ? currentIndex + 1 : 1;
 
   return {
     moduleIndex: foundModuleIdx >= 0 ? foundModuleIdx : 0,
     moduleNumber: moduleNum,
     lessonIndexInModule: foundLessonIdx >= 0 ? foundLessonIdx : 0,
     lessonNumberInModule: lessonNum,
+    overallLessonIndex: overallIndex,
     lessonLabel: `Lesson ${moduleNum}.${lessonNum}`,
     totalModules: modules.length,
     totalLessons,

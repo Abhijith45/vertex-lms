@@ -9,6 +9,7 @@ import {
   recordIdempotencyKey,
   grantCourseAccess,
   grantAllAccess,
+  setSubscription,
 } from "@/lib/entitlements";
 import { getPostHogClient } from "@/lib/posthog-server";
 
@@ -71,6 +72,13 @@ export async function POST(req: Request) {
 
       if (tier === "all-access") {
         grantAllAccess(userId);
+      } else if (tier === "monthly") {
+        setSubscription({
+          userId,
+          plan: "monthly",
+          status: "active",
+          currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        });
       } else if (courseSlug) {
         grantCourseAccess(userId, courseSlug);
       }

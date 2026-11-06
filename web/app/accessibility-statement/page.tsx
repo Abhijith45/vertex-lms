@@ -1,9 +1,10 @@
 import React from "react";
 import Link from "next/link";
-import { ChevronRight, Accessibility, CheckCircle2, Eye, Keyboard, Monitor, Mail } from "lucide-react";
+import { ChevronRight, Accessibility, CheckCircle2, Eye, Keyboard, Monitor } from "lucide-react";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
+import { PolicyContactSection } from "@/components/compliance/policy-contact-card";
 
 export const metadata = {
   title: "Accessibility Statement | Vertex",
@@ -129,24 +130,11 @@ export default function AccessibilityStatementPage() {
               </section>
 
               {/* Section 4 */}
-              <section className="space-y-3">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
-                  <Mail className="h-5 w-5 text-primary-500" />
-                  <span>4. Feedback & Accessibility Support</span>
-                </h2>
-                <p>
-                  We welcome feedback on the accessibility of Vertex. If you encounter any accessibility barriers or have suggestions for improvement, please contact developer Abhijeet Rawat directly:
-                </p>
-                <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-5 bg-neutral-50 dark:bg-neutral-900/60 max-w-md">
-                  <p className="font-bold text-neutral-900 dark:text-white text-base">Abhijeet Rawat</p>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                    Email: <a href="mailto:abhijeetrawat45@gmail.com" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">abhijeetrawat45@gmail.com</a>
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
-                    We aim to respond to accessibility feedback within 24 to 48 hours.
-                  </p>
-                </div>
-              </section>
+              <PolicyContactSection
+                sectionTitle="4. Feedback & Accessibility Support"
+                description="We welcome feedback on the accessibility of Vertex. If you encounter any accessibility barriers or have suggestions for improvement, please contact developer Abhijeet Rawat directly:"
+                note="We aim to respond to accessibility feedback within 24 to 48 hours."
+              />
             </div>
           </main>
         </div>

@@ -14,7 +14,7 @@ export interface StripeEventPayload {
         userId?: string;
         courseSlug?: string;
         courseTitle?: string;
-        tier?: "course" | "all-access";
+        tier?: "course" | "monthly" | "all-access";
       };
       subscription?: string;
       payment_status?: string;
@@ -22,8 +22,14 @@ export interface StripeEventPayload {
   };
 }
 
-const DEFAULT_WEBHOOK_SECRET =
-  process.env.STRIPE_WEBHOOK_SECRET || "whsec_vertex_production_test_secret_2026";
+export function getStripeWebhookSecret(overrideSecret?: string): string {
+  if (overrideSecret) return overrideSecret;
+  if (process.env.STRIPE_WEBHOOK_SECRET) return process.env.STRIPE_WEBHOOK_SECRET;
+  if (process.env.NODE_ENV === "production") {
+    console.warn("CRITICAL: STRIPE_WEBHOOK_SECRET is not configured in production environment.");
+  }
+  return "whsec_vertex_dev_test_secret_2026";
+}
 
 let cachedStripeInstance: Stripe | null = null;
 
@@ -85,20 +91,21 @@ export function isStripeLiveMode(): boolean {
 export function constructStripeWebhookEvent(
   rawBody: string,
   signature: string | null,
-  secret = process.env.STRIPE_WEBHOOK_SECRET || DEFAULT_WEBHOOK_SECRET
+  secret?: string
 ): StripeEventPayload | Stripe.Event | null {
   if (!signature || !rawBody) return null;
 
+  const resolvedSecret = getStripeWebhookSecret(secret);
   const stripe = getStripeClient();
-  if (stripe && secret) {
+  if (stripe && resolvedSecret) {
     try {
-      return stripe.webhooks.constructEvent(rawBody, signature, secret);
+      return stripe.webhooks.constructEvent(rawBody, signature, resolvedSecret);
     } catch {
       // Fall through to HMAC fallback
     }
   }
 
-  const isVerified = verifyStripeWebhookSignature(rawBody, signature, secret);
+  const isVerified = verifyStripeWebhookSignature(rawBody, signature, resolvedSecret);
   if (!isVerified) return null;
 
   try {
@@ -115,10 +122,11 @@ export function constructStripeWebhookEvent(
 export function verifyStripeWebhookSignature(
   rawBody: string,
   signatureHeader: string | null,
-  secret = DEFAULT_WEBHOOK_SECRET,
+  secret?: string,
   toleranceSeconds = 300
 ): boolean {
   if (!signatureHeader || !rawBody) return false;
+  const resolvedSecret = getStripeWebhookSecret(secret);
 
   const items = signatureHeader.split(",");
   let timestamp: string | null = null;
@@ -147,7 +155,7 @@ export function verifyStripeWebhookSignature(
 
   // Recompute HMAC-SHA256: timestamp + '.' + rawBody
   const signedPayload = `${timestamp}.${rawBody}`;
-  const expectedSignature = createHmac("sha256", secret)
+  const expectedSignature = createHmac("sha256", resolvedSecret)
     .update(signedPayload, "utf-8")
     .digest("hex");
 
@@ -168,11 +176,12 @@ export function verifyStripeWebhookSignature(
  */
 export function generateTestStripeSignature(
   rawBody: string,
-  secret = DEFAULT_WEBHOOK_SECRET,
+  secret?: string,
   timestamp = Math.floor(Date.now() / 1000)
 ): string {
+  const resolvedSecret = getStripeWebhookSecret(secret);
   const signedPayload = `${timestamp}.${rawBody}`;
-  const hmac = createHmac("sha256", secret)
+  const hmac = createHmac("sha256", resolvedSecret)
     .update(signedPayload, "utf-8")
     .digest("hex");
 

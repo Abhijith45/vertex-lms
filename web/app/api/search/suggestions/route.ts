@@ -133,7 +133,7 @@ export async function GET(req: Request) {
       trending: DEFAULT_TRENDING,
     };
 
-    suggestionsCache.set(cacheKey, payload);
+    suggestionsCache.put(cacheKey, payload);
 
     return NextResponse.json(payload, {
       headers: {

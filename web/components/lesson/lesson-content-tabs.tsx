@@ -60,16 +60,48 @@ const portableTextComponents: PortableTextComponents = {
   },
 };
 
+const DEFAULT_EMPTY_KEY_POINTS: string[] = [];
+const DEFAULT_EMPTY_RESOURCES: Resource[] = [];
+const DEFAULT_EMPTY_CHAPTERS: Array<{ startSeconds: number; label: string }> = [];
+
+const FALLBACK_KEY_POINTS: string[] = [
+  "Understand the different data fetching methods in Next.js",
+  "Learn how caching works in Server Components",
+  "Implement revalidation and cache control",
+  "Optimize performance with advanced caching strategies",
+];
+
+const FALLBACK_RESOURCES: Resource[] = [
+  {
+    title: "Next.js Data Fetching Documentation",
+    description: "Official Next.js docs on data fetching methods.",
+    url: "https://nextjs.org/docs",
+    type: "doc",
+  },
+  {
+    title: "Caching and Revalidation Guide",
+    description: "Deep dive into Next.js caching strategies.",
+    url: "https://nextjs.org/docs/app/building-your-application/data-fetching/fetching-caching-and-revalidating",
+    type: "doc",
+  },
+  {
+    title: "Example Repository",
+    description: "Explore the source code for this lesson.",
+    url: "https://github.com/vercel/next.js",
+    type: "github",
+  },
+];
+
 export function LessonContentTabs({
   overviewNotes,
-  keyPoints = [],
+  keyPoints = DEFAULT_EMPTY_KEY_POINTS,
   proTip,
-  resources = [],
+  resources = DEFAULT_EMPTY_RESOURCES,
   lessonSlug,
   lessonTitle,
   courseTitle,
   transcriptCues,
-  chapters = [],
+  chapters = DEFAULT_EMPTY_CHAPTERS,
 }: LessonContentTabsProps) {
   const [activeTab, setActiveTab] = useState<"content" | "copilot" | "transcript" | "notes" | "discussions">("content");
 
@@ -85,37 +117,13 @@ export function LessonContentTabs({
   const points =
     keyPoints && keyPoints.length > 0
       ? keyPoints
-      : [
-          "Understand the different data fetching methods in Next.js",
-          "Learn how caching works in Server Components",
-          "Implement revalidation and cache control",
-          "Optimize performance with advanced caching strategies",
-        ];
+      : FALLBACK_KEY_POINTS;
 
   // Fallback resources if not provided
   const resourceList: Resource[] =
     resources && resources.length > 0
       ? resources
-      : [
-          {
-            title: "Next.js Data Fetching Documentation",
-            description: "Official Next.js docs on data fetching methods.",
-            url: "https://nextjs.org/docs",
-            type: "doc",
-          },
-          {
-            title: "Caching and Revalidation Guide",
-            description: "Deep dive into Next.js caching strategies.",
-            url: "https://nextjs.org/docs/app/building-your-application/data-fetching/fetching-caching-and-revalidating",
-            type: "doc",
-          },
-          {
-            title: "Example Repository",
-            description: "Explore the source code for this lesson.",
-            url: "https://github.com/vercel/next.js",
-            type: "github",
-          },
-        ];
+      : FALLBACK_RESOURCES;
 
   return (
     <div className="mt-8 space-y-10">

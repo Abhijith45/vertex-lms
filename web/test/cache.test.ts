@@ -3,11 +3,14 @@ import assert from "node:assert/strict";
 import { SimpleMemoryCache } from "../lib/cache.ts";
 
 describe("SimpleMemoryCache - Basic Operations", () => {
-  test("stores and retrieves values", () => {
+  test("stores and retrieves values with set and put", () => {
     const cache = new SimpleMemoryCache<string>();
     cache.set("key1", "value1");
+    cache.put("key2", "value2");
     assert.equal(cache.get("key1"), "value1");
+    assert.equal(cache.get("key2"), "value2");
     assert.equal(cache.has("key1"), true);
+    assert.equal(cache.has("key2"), true);
   });
 
   test("returns undefined for non-existent keys", () => {

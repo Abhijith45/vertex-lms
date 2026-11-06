@@ -4,6 +4,7 @@ import { ChevronRight, Shield, Lock, Server, Key, AlertCircle, CheckCircle2 } fr
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
+import { PolicyContactSection } from "@/components/compliance/policy-contact-card";
 
 export const metadata = {
   title: "Security Notice & Practices | Vertex",
@@ -118,24 +119,13 @@ export default function SecurityNoticePage() {
               </section>
 
               {/* Section 4 */}
-              <section className="space-y-3">
-                <h2 className="font-display text-xl sm:text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2.5">
-                  <AlertCircle className="h-5 w-5 text-primary-500" />
-                  <span>4. Vulnerability Disclosure Policy</span>
-                </h2>
-                <p>
-                  We appreciate the work of the security research community. If you discover a potential vulnerability or security flaw in Vertex:
-                </p>
-                <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 p-5 bg-neutral-50 dark:bg-neutral-900/60 max-w-md">
-                  <p className="font-bold text-neutral-900 dark:text-white text-base">Security Contact</p>
-                  <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-1">
-                    Email: <a href="mailto:abhijeetrawat45@gmail.com" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">abhijeetrawat45@gmail.com</a>
-                  </p>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-2">
-                    Please provide detailed steps to reproduce. We will acknowledge your report within 24 hours.
-                  </p>
-                </div>
-              </section>
+              <PolicyContactSection
+                sectionTitle="4. Vulnerability Disclosure Policy"
+                description="We appreciate the work of the security research community. If you discover a potential vulnerability or security flaw in Vertex:"
+                name="Security Contact"
+                icon={AlertCircle}
+                note="Please provide detailed steps to reproduce. We will acknowledge your report within 24 hours."
+              />
             </div>
           </main>
         </div>

@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Play, ArrowRight, BookOpen, Clock } from "lucide-react";
+import { Play, BookOpen, Clock } from "lucide-react";
 import { formatVideoTime } from "@/lib/utils/video";
 import { CourseIcon } from "@/components/home/course-icons";
 import posthog from "posthog-js";

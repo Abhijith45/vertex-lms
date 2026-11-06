@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import posthog from "posthog-js";
 import { useLessonPlayback } from "./lesson-playback-context";
-import { formatVideoTime } from "@/lib/utils/video";
+import { formatVideoTime, parseTimestampToSeconds } from "@/lib/utils/video";
 import { KnowledgeCheckpoint } from "./knowledge-checkpoint";
 
 export interface ChatMessage {
@@ -31,18 +31,6 @@ interface LessonCopilotProps {
   lessonSlug?: string;
   lessonTitle?: string;
   courseTitle?: string;
-}
-
-export function parseTimestampToSeconds(ts: string): number {
-  const clean = ts.replace(/[[\]]/g, "").trim();
-  const parts = clean.split(":").map(Number);
-  if (parts.length === 3) {
-    return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  }
-  if (parts.length === 2) {
-    return parts[0] * 60 + parts[1];
-  }
-  return 0;
 }
 
 export function LessonCopilot({

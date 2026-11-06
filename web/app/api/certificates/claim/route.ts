@@ -5,8 +5,7 @@ import { getPostHogClient } from "@/lib/posthog-server";
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
-    const user = await currentUser();
+    const [{ userId }, user] = await Promise.all([auth(), currentUser()]);
 
     const body = await req.json();
     const { courseSlug, courseTitle, skills, totalLessons } = body;

@@ -160,7 +160,7 @@ export function WhatYoullLearn({ outcomes }: WhatYoullLearnProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {list.map((outcome, idx) => (
           <div
-            key={outcome._key || idx}
+            key={outcome._key || outcome.title}
             className="rounded-xl border border-neutral-200/70 dark:border-neutral-800 bg-white dark:bg-neutral-900/90 p-6 flex items-start gap-5 shadow-2xs hover:border-neutral-300 dark:hover:border-neutral-700 hover:shadow-xs transition-all duration-150"
           >
             <OutcomeIcon iconType={outcome.icon} index={idx} />

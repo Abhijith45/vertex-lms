@@ -4,6 +4,7 @@ import {
   PLATFORM_PRICING,
   grantCourseAccess,
   grantAllAccess,
+  setSubscription,
 } from "@/lib/entitlements";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { getStripeClient, isStripeConfigured, isStripeTestMode } from "@/lib/stripe";
@@ -12,8 +13,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
-    const user = await currentUser();
+    const [{ userId }, user] = await Promise.all([auth(), currentUser()]);
 
     const body = await req.json();
     const { courseSlug, courseTitle, tier = "course" } = body;
@@ -30,6 +30,8 @@ export async function POST(req: Request) {
 
     const stripe = getStripeClient();
 
+    const isSubscription = tier === "all-access" || tier === "monthly";
+
     // 1. If Stripe keys are configured (either Test or Live mode), construct Stripe Checkout Session
     if (stripe && isStripeConfigured()) {
       try {
@@ -41,18 +43,26 @@ export async function POST(req: Request) {
                 product_data: {
                   name:
                     tier === "all-access"
-                      ? "Vertex All-Access Engineering Pass"
+                      ? "Vertex All-Access Annual Pass"
+                      : tier === "monthly"
+                      ? "Vertex All-Access Monthly Pass"
                       : `${courseTitle || "Vertex Course"} Lifetime Access`,
                   description:
                     "Interactive video intelligence, AI Copilot, checkpoints, and verified certification.",
                 },
                 unit_amount: pricing.priceCents,
-                ...(tier === "all-access" ? { recurring: { interval: "year" } } : {}),
+                ...(isSubscription
+                  ? {
+                      recurring: {
+                        interval: tier === "monthly" ? "month" : "year",
+                      },
+                    }
+                  : {}),
               },
               quantity: 1,
             },
           ],
-          mode: tier === "all-access" ? "subscription" : "payment",
+          mode: isSubscription ? "subscription" : "payment",
           customer_email: recipientEmail,
           metadata: {
             userId: recipientUserId,
@@ -81,9 +91,16 @@ export async function POST(req: Request) {
     }
 
     // 2. Zero-Failure Local / Dev Mode Simulation:
-    // When no Stripe keys are configured, instantly grant entitlement so local testers & demos are never blocked
+    // When no Stripe keys are configured or fallback is triggered, instantly provision access
     if (tier === "all-access") {
       grantAllAccess(recipientUserId);
+    } else if (tier === "monthly") {
+      setSubscription({
+        userId: recipientUserId,
+        plan: "monthly",
+        status: "active",
+        currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      });
     } else if (courseSlug) {
       grantCourseAccess(recipientUserId, courseSlug);
     }
