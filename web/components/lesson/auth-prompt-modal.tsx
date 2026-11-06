@@ -2,8 +2,10 @@
 
 import React, { useEffect, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Lock, Sparkles, Check, X, Play } from "lucide-react";
+import { buildAuthUrl } from "@/lib/utils/url";
 
 const emptySubscribe = () => () => {};
 
@@ -18,6 +20,7 @@ export function AuthPromptModal({
   onClose,
   lessonTitle,
 }: AuthPromptModalProps) {
+  const pathname = usePathname();
   const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   // Lock body scroll while modal is active to prevent background jumps
@@ -143,23 +146,19 @@ export function AuthPromptModal({
 
           {/* Action buttons (Touch target >= 44px, tactile feedback, focus rings) */}
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
-            <SignInButton mode="modal">
-              <button
-                type="button"
-                className="w-full flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#E05A36] to-[#d04e2c] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#E05A36]/25 hover:shadow-[#E05A36]/35 hover:from-[#e86644] hover:to-[#db5734] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-[#E05A36] focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-950"
-              >
-                Sign In to Watch
-              </button>
-            </SignInButton>
+            <Link
+              href={buildAuthUrl("sign-in", pathname)}
+              className="w-full flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#E05A36] to-[#d04e2c] px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-[#E05A36]/25 hover:shadow-[#E05A36]/35 hover:from-[#e86644] hover:to-[#db5734] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer focus:outline-hidden focus:ring-2 focus:ring-[#E05A36] focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-950"
+            >
+              Sign In to Watch
+            </Link>
 
-            <SignUpButton mode="modal">
-              <button
-                type="button"
-                className="w-full flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-300 dark:border-white/15 bg-neutral-50 hover:bg-neutral-100 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] hover:border-neutral-400 dark:hover:border-white/25 px-5 py-3 text-sm font-semibold text-neutral-800 hover:text-neutral-950 dark:text-neutral-200 dark:hover:text-white transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs focus:outline-hidden focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-950"
-              >
-                Create Account
-              </button>
-            </SignUpButton>
+            <Link
+              href={buildAuthUrl("sign-up", pathname)}
+              className="w-full flex-1 min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl border border-neutral-300 dark:border-white/15 bg-neutral-50 hover:bg-neutral-100 dark:bg-white/[0.05] dark:hover:bg-white/[0.1] hover:border-neutral-400 dark:hover:border-white/25 px-5 py-3 text-sm font-semibold text-neutral-800 hover:text-neutral-950 dark:text-neutral-200 dark:hover:text-white transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer shadow-xs focus:outline-hidden focus:ring-2 focus:ring-neutral-400 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-950"
+            >
+              Create Account
+            </Link>
           </div>
 
           {/* Footer note */}

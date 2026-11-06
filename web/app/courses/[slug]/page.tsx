@@ -6,6 +6,7 @@ import { CourseHero } from "@/components/course/course-hero";
 import { CourseViewTracker } from "@/components/course/course-view-tracker";
 import { WhatYoullLearn } from "@/components/course/what-youll-learn";
 import { CourseContentAccordion, type ModuleItem } from "@/components/course/course-content-accordion";
+import { CoursePricingCard } from "@/components/course/course-pricing-card";
 import { StickyCourseProgress } from "@/components/course/sticky-course-progress";
 import { BottomGraphic } from "@/components/home/bottom-graphic";
 import { Footer } from "@/components/layout/footer";
@@ -358,6 +359,12 @@ export default async function CourseDetailPage({ params }: CoursePageProps) {
               totalDurationFormatted={totalDurationFormatted}
               courseSlug={course.slug}
               completedLessonIds={completedLessonIdList}
+            />
+
+            {/* SaaS Pricing & Enrollment Card */}
+            <CoursePricingCard
+              courseSlug={course.slug}
+              courseTitle={course.title}
             />
           </main>
         </div>

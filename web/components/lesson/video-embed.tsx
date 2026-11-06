@@ -24,8 +24,8 @@ import {
   clampSeekTime,
 } from "@/lib/utils/video";
 import posthog from "posthog-js";
-
 import { AuthPromptModal } from "./auth-prompt-modal";
+import { useLessonPlayback } from "./lesson-playback-context";
 
 interface VideoEmbedProps {
   videoUrl?: string;
@@ -97,6 +97,7 @@ export function VideoEmbed({
 }: VideoEmbedProps) {
   const router = useRouter();
   const { isSignedIn, isLoaded: isAuthLoaded } = useUser();
+  const { registerSeekHandler, updatePlaybackState } = useLessonPlayback();
   const rawId = useId();
   const playerId = `yt-player-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
@@ -335,6 +336,24 @@ export function VideoEmbed({
       }
     }
   }, [startSeconds]);
+
+  // Register external seekTo implementation for transcript & timestamped notes
+  useEffect(() => {
+    registerSeekHandler((seconds: number) => {
+      const valid = clampSeekTime(seconds, duration || 3600);
+      setCurrentTime(valid);
+      if (playerInstanceRef.current && typeof playerInstanceRef.current.seekTo === "function") {
+        try {
+          playerInstanceRef.current.seekTo(valid, true);
+        } catch {}
+      }
+    });
+  }, [duration, registerSeekHandler]);
+
+  // Broadcast current playback state to LessonPlaybackContext
+  useEffect(() => {
+    updatePlaybackState({ currentTime, duration, isPlaying });
+  }, [currentTime, duration, isPlaying, updatePlaybackState]);
 
   // ──────────────────────────────────────────────────────────
   // 2. Continuous 200ms Time & Scrubber Sync Polling

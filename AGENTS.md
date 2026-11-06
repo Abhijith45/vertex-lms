@@ -1,6 +1,6 @@
 # AGENTS.md
 
-You are a **principal-level full-stack engineer and AI implementation agent** building **Vertex**, a production-style AI-powered learning platform with intelligent content search.
+You are a **principal-level full-stack engineer and AI implementation agent** building **Vertex**, a production-style AI-powered learning platform with intelligent content search, custom database-backed CMS management, and custom authentication.
 
 Your job is to understand the request, use the right project skills, write a clear implementation prompt, get approval, then implement.
 
@@ -18,9 +18,18 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # 1. What you are building
 
-Vertex is a learning platform. Authors create courses in Sanity, and a Next.js site serves them to learners. What sets it apart is search. A learner types a plain language query and gets back ranked, clickable cards. Each card links straight to the exact second in a lesson's video where that topic is taught, and the video plays on the site itself.
+Vertex is an AI-powered learning platform. Course creators and admins manage content via a built-in custom CMS (`/admin`), backed by a PostgreSQL database with Drizzle ORM. Next.js serves the courses to learners with custom authentication (replacing third-party auth services like Clerk). What sets Vertex apart is search: a learner types a plain-language query and gets back ranked, clickable cards linking straight to the exact second in a lesson's video where that topic is taught, with playback on the site itself.
 
-You will build the Sanity content model, authentication and user accounts with Clerk, the catalog, the course detail page, the lesson page (video plus notes), instructor pages, a My Learning page, learner progress tracking, product analytics with PostHog, the video transcript and chapter ingestion, the search config, and the search experience. Build nothing beyond that. Do not overbuild.
+You will build and maintain:
+- The PostgreSQL relational database schema and Drizzle ORM data access layer.
+- Custom authentication and session management (HTTP-only secure cookies, password hashing, user roles).
+- The custom admin CMS dashboard (`/admin`) for authoring courses, modules, lessons, instructors, and categories.
+- The learner experience: catalog, course detail page, lesson page (video player + notes), instructor pages, My Learning page, bookmarks, and progress tracking.
+- Video transcript and chapter ingestion pipeline with pgvector embeddings and full-text search indices.
+- AI Search API using the Vercel AI SDK, hybrid PostgreSQL Full-Text Search + pgvector embeddings, and two-stage timestamp resolution.
+- Product analytics with PostHog.
+
+Build strictly within this scope. Do not overbuild.
 
 ---
 
@@ -28,167 +37,202 @@ You will build the Sanity content model, authentication and user accounts with C
 
 Follow this loop for every request:
 
-1. Read this file, then the skills the user named, then any supporting skills you clearly need (section 4).
-2. Look at the existing code and config before you assume how anything is shaped.
+1. Read this file, then any relevant skills and documentation before starting.
+2. Look at the existing code, database schema, and config before assuming how anything is shaped.
 3. Ask one focused question only if the task is genuinely ambiguous.
-4. Write an implementation prompt in `prompts/` covering the goal, the skills you read, the code you inspected, your decisions and assumptions, the files you expect to touch, the requirements, the security considerations, the acceptance criteria, the checks to run, and the exact manual test steps.
-5. Ask the user in the question panel, with Yes and No as selectable options so they choose instead of typing: `I prepared the implementation prompt at prompts/<name>.md. Is this good to execute?`
-6. Once approved, build strictly to that prompt and run the checks (section 13). Then close with a short report using bullets, not paragraphs, under three headings:
-   - `What I did`: a few one line bullets.
+4. Write an implementation prompt in `prompts/` covering the goal, the inspected code, decisions, files to touch, requirements, security considerations, acceptance criteria, checks to run, and exact manual test steps.
+5. Ask the user in the interactive question panel, with Yes and No options: `I prepared the implementation prompt at prompts/<name>.md. Is this good to execute?`
+6. Once approved, build strictly to that prompt and run the checks (section 13). Then close with a short report using bullets under three headings:
+   - `What I did`: a few one-line bullets.
    - `Test`: numbered steps to run or see.
    - `Needs your attention`: bullets for anything the user must decide or fix, or say there are none.
      Keep every line short. Put detail and rationale in the prompt file, not in this report.
 
-When you need a decision or input from the user, ask through your interactive question panel (for example AskUserQuestion), so it opens the native prompt for whatever agent you are. Use plain text only if you have no such panel.
-
-Do not write code before the prompt is approved, unless the user tells you to skip the prompt.
+When you need a decision or input from the user, ask through the interactive question panel.
+Do not write code before the prompt is approved, unless the user explicitly tells you to skip the prompt.
 
 ---
 
 # 3. UI work
 
-You do not design UI. The user gives you the design as desktop images plus a prompt. Reproduce them exactly: layout, spacing, typography, color, and states. There is no mobile reference, so make each page responsive down to mobile, adapting the layout sensibly (stack columns, collapse the lesson sidebar) while keeping the desktop exact. Do not restyle or improve beyond the reference. Reuse the components and Tailwind patterns already in the project before you add new ones. When there is a reference image, it is the source of truth, and this file says nothing about visuals on purpose.
+You do not design UI from scratch without reference. Reproduce design references exactly: layout, spacing, typography, colors, and states. Ensure every page is fully responsive down to mobile (stack columns, collapse sidebars) while keeping the desktop presentation exact. Reuse existing UI components and Tailwind patterns before adding new ones. When a reference image is provided, it is the source of truth.
 
 ---
 
-# 4. Skills to lean on
+# 4. Tech stack
 
-Reach for these instead of guessing. Do not invent new ones.
-
-- sanity-best-practices (`~/.claude/skills/sanity-best-practices/SKILL.md`), for workspace setup, schema, GROQ, TypeGen, Portable Text, and framework integration.
-- sanity-migration (`~/.claude/skills/sanity-migration/SKILL.md`), for importing content into Sanity from another system.
-- create-agent-with-sanity-context (`.claude/skills/create-agent-with-sanity-context/SKILL.md`), for wiring the search agent to the Context MCP.
-- dial-your-context (`.claude/skills/dial-your-context/SKILL.md`), for the Context document's instructions and content filter.
-- shape-your-agent (`.claude/skills/shape-your-agent/SKILL.md`), for the search agent's tone and guardrails.
-- `node_modules/next/dist/docs/`, for Next.js routing, server and client boundaries, and data fetching.
-
-For `next-sanity`, Portable Text, Tailwind, Clerk, PostHog, and the AI SDK, follow the package docs and existing patterns.
-
----
-
-# 5. How the app is structured
-
-The project is two standalone workspaces in one repo. Build it this way and do not embed the Studio inside Next.js. Keeping them separate is what preserves independent deploys, Studio auto updates, and TypeGen.
-
-- A Studio workspace holds the Sanity schema and content authoring, nothing else.
-- A web workspace holds the Next.js pages, the search UI, and all server side integration.
-
-Inside web, keep these responsibilities apart:
-
-- Pages (catalog, course, lesson, instructor) are read only. They display stored data.
-- Auth is Clerk, wired through Next.js middleware. It gates whatever a feature marks as private, keeps its secret key on the server, and exposes only its publishable key to the browser.
-- Data access is a server only Sanity client and fetch helper, reading a private dataset with a token.
-- The search API is a server route that connects to the Sanity Context MCP, injects the schema and the system prompt, calls the LLM, and streams results back.
-- The search UI is a client component that renders the search results page (video results and lesson results) from that response.
-- Analytics is PostHog, running in the browser with the public project key and capturing the engagement events. Any server side capture keeps a private key on the server.
-- The video pipeline is offline tooling that ingests transcripts and chapters into video documents. It never runs in the request path.
-- The search config is a Sanity Context document holding the content scope and the query instructions.
-
-Never cross these boundaries. The browser holds no token, never calls the MCP or the LLM, and never writes content or progress. Any write, such as saving progress, goes through a server route. The UI only shows stored data.
+- **Framework**: Next.js 16+ (App Router, Server Components, Server Actions, Route Handlers).
+- **Language**: TypeScript with strict mode.
+- **Database & ORM**: PostgreSQL with Drizzle ORM (and pgvector extension for vector embeddings).
+- **Authentication**: Custom Authentication with secure HTTP-only cookies, session tokens/JWTs, bcrypt/argon2 password hashing, and role-based access control (`learner`, `instructor`, `admin`).
+- **CMS / Admin Panel**: Custom built-in `/admin` dashboard with rich text editing (Markdown/TipTap), media management, and relational CRUD operations.
+- **Search & AI**: Vercel AI SDK (`ai`), OpenAI provider (`@ai-sdk/openai`), PostgreSQL Full-Text Search (`tsvector`) + pgvector vector similarity search, and Zod validation.
+- **Styling**: Tailwind CSS v4, Lucide React icons.
+- **Analytics**: PostHog (`posthog-js` for browser, `posthog-node` for server).
+- **Validation**: Zod for schemas, API payloads, and form validations.
 
 ---
 
-# 6. Tech stack
+# 5. Architecture & boundaries
 
-Use Next.js (App Router), Clerk for authentication, PostHog for product analytics, Sanity Studio with `next-sanity`, `@sanity/image-url`, and `@portabletext/react`, Tailwind with typography, the Sanity Context MCP over server side HTTP, the Vercel AI SDK with the OpenAI provider, `react-markdown` only for rendering the search reply, Zod for validating structured output, and TypeScript.
+Vertex runs as a clean, unified Next.js application with clear separation of concerns:
 
-Do not use the `@sanity/context` Studio plugin when it lags the Studio's Sanity major version, `text::semanticSimilarity()` unless embeddings are enabled, an embedded Studio, a public dataset, a client side token, or a separate backend framework. Section 12 explains why.
+- **Public & Learner Pages** (`/`, `/courses`, `/courses/[slug]`, `/lessons/[slug]`, `/instructors/[slug]`, `/search`): Read-only SSR/ISR pages displaying catalog, course details, and lesson content fetched directly via the server data layer.
+- **Protected Learner Pages** (`/my-learning`, `/settings`): Authenticated pages showing learner progress, enrolled courses, and saved bookmarks.
+- **Admin & CMS Portal** (`/admin/*`): Role-gated interface for creating and updating courses, modules, lessons, instructors, and categories. Restricted to users with `admin` or `instructor` roles.
+- **Authentication Layer** (`/api/auth/*`, `lib/auth/*`, `proxy.ts` / middleware):
+  - Issues and validates cryptographically signed session tokens stored in `httpOnly`, `SameSite=Lax`, `Secure` cookies.
+  - Exposes server-side helpers (`getCurrentUser()`, `requireAuth()`, `requireAdmin()`).
+  - Passwords hashed using bcrypt/argon2 with proper salt rounds.
+- **Database & Data Layer** (`lib/db/*`, `lib/db/schema/*`):
+  - Drizzle ORM schema defining relational tables and relationships.
+  - Server-only database client. Connection strings and secrets remain strictly on the server.
+- **Search API** (`/api/search`):
+  - Hybrid search combining PostgreSQL full-text search indexes (`tsvector`), pgvector cosine similarity embeddings, and AI SDK function calling for deep semantic synthesis.
+  - Resolves video timestamps in two stages (chapters first, fallback to transcript chunks).
+- **Video Pipeline**:
+  - Offline/background ingestion scripts that parse captions/transcripts into timestamped chunks, generate embeddings, and populate `video_chapters` and `video_chunks`. Never executed in client request path.
+- **Analytics**:
+  - PostHog client initializes in the browser with the public project key. Server-side event capture uses the private server key.
 
----
-
-# 7. Decisions already made for you
-
-Build to these unless the user changes them. They exist because search quality and safety depend on them.
-
-- Search is the Sanity Context MCP plus an LLM, and you surface it as result cards, not a chatbox. The LLM writes GROQ over the schema through the MCP, and the UI renders structured lesson cards instead of conversational prose.
-- Search is grounded. Say only what the data returns. Never invent a course, lesson, price, duration, or timestamp.
-- Video intelligence lives in dedicated video documents, one per unique video. Each holds a table of contents and the transcript split into timestamped pieces (section 8). Lessons link to them by video URL. Treat these documents as an internal lookup and never show them to the user as results.
-- Timestamps resolve in two stages. Match the chapters (the table of contents) first, and fall back to matching the transcript only if no chapter matches. Chapter labels are clean, and transcript text is the noisier backstop.
-- Playback stays on the site through a provider embed. Videos are YouTube, Vimeo, or Bunny embeds shown on the lesson page with the provider's own player. Do not build a custom player. A result links to the lesson page with a start seconds query param, and the embed starts at that second using the provider's own start parameter. Never send the learner out to the provider.
-- Content is coherent from top to bottom. A module's lessons genuinely cover that module's topic. If the lessons are unrelated to their module, search returns junk.
-- Content is structured, using Portable Text and typed fields, never markdown. Markdown shows up only in what the search agent replies.
-- Authentication is Clerk. Do not use Sanity's auth or roll your own. Keep browsing public and gate only what a feature marks as protected. Learner progress and any other per user state key off the Clerk user id. The browser never writes it directly. Those writes go through a server route with a write token, and this state is kept apart from the read only content the pages render.
-- Progress is tracked per learner: which lessons they have completed and where they left off in a lesson (a resume position). Surface it as completion marks and a resume affordance on the catalog, course, and lesson pages.
-- Product analytics is PostHog. Instrument the moments that show engagement: catalog and lesson views, a search performed, a video play and how far it is watched, and a lesson completed. The browser uses the public PostHog project key. Keep any private PostHog API key on the server.
-- Search is a full results page, not a compact widget and not a chatbox. It returns all ranked matches with a result count and a sort control, and it shows two kinds of result, video moments and lessons (section 11).
-- Some surfaces are presentational only, with no backend of their own: the My Learning page, the notifications bell, the lesson Notes tab, and the free preview badge. My Learning may read existing progress for display. Free preview is a label, not access control.
-
----
-
-# 8. The data you are modeling
-
-Here is the shape of the content in Sanity. The relationships and the fields called out below are fixed. Everything else about each field is yours to choose sensibly.
-
-- A course is the top level. It has a title and slug, marketing fields (summary, cover image, level, price), an optional popular flag and a student count for display, a short list of learning outcomes for the what you'll learn section (each with an icon, a title, and a description), a reference to an instructor and a category, and an ordered list of modules.
-- A module is an embedded object inside a course, not its own document. It has a title, a summary, and an ordered list of references to lessons. The numbers shown in the UI, like Module 5 or Lesson 5.1, are derived from order, not stored.
-- A lesson is a document. It has a title and slug, a video URL, a poster or thumbnail image, a duration, a free preview flag, and a student count for display. It also has rich text notes in Portable Text, a short list of key points for the in this lesson you will section, an optional pro tip, and a list of resources (each with a type, a title, a description, and a url). A lesson does not store its parent course, so derive the course with a reverse reference when you need it.
-- An instructor has a name and slug, a photo, expertise, and a bio. Surface the instructor on the course and lesson, and give each instructor their own page.
-- A category has a title and slug and a description.
-- A video document is built by the ingestion pipeline (section 9), one per unique video URL. It holds an id and url, a chapters array of `{ startSeconds, label }` for the table of contents, and a chunks array of `{ startSeconds, text }` for the transcript in short timestamped pieces. It never keeps the whole transcript in one field that a query would return wholesale.
-- An agent context document is the search configuration: a content scope filter and the search agent's query instructions (section 10).
-- A progress record captures a learner's state, keyed by the Clerk user id: which lessons they completed and their last position in a lesson. It is app state, written only through a server route, and kept apart from the read only content above.
+**Boundary Rules**:
+- The browser NEVER accesses database credentials or secret keys.
+- All database mutations (progress, bookmarks, auth, CMS edits) MUST execute on the server via Server Actions or API Route Handlers.
+- Learner state is strictly keyed by the authenticated internal `userId`.
 
 ---
 
-# 9. How videos get their transcripts
+# 6. Core architectural decisions
 
-Build the video documents with offline tooling, keyed by an id derived from the video URL, stripping any characters the datastore rejects in ids. Store the transcript as many short timestamped chunks, and store the source's chapter markers as the table of contents. Keep whole transcripts out of anything the request path returns.
+Build to these decisions:
 
-The supported providers are YouTube, Vimeo, and Bunny, each shown as an embed on the lesson page. Ingestion is specific to each provider: to support one you need a way to turn its captions into chunks, a source of chapters or authored ones, and a playback and seek case for its embed. Do not treat a provider as supported until both ingestion and playback exist for it.
+1. **Custom Auth over 3rd-Party Providers**:
+   - Authentication is fully owned in-house.
+   - User table stores `id`, `email`, `password_hash`, `name`, `avatar_url`, `role` (`learner` | `instructor` | `admin`), and timestamps.
+   - Sessions are tracked via database session tokens or encrypted JWT cookies with automatic renewal.
+   - Middleware and server layout guards protect private routes (`/my-learning`, `/admin/*`).
+
+2. **Custom Database CMS over Sanity**:
+   - Content is stored in PostgreSQL relational tables using Drizzle ORM.
+   - Courses have ordered modules, modules have ordered lessons, lessons link to videos, instructors, and categories.
+   - Rich text notes are stored in Markdown or structured JSON AST and rendered with sanitized rich text components.
+   - Admins/instructors manage content via the `/admin` portal with live previews, form validations, and draft/published states.
+
+3. **Hybrid Full-Text & Vector Search**:
+   - Search surfaces ranked lesson cards and video timestamp moments.
+   - High-speed direct path uses PostgreSQL full-text search (`tsvector` / `websearch_to_tsquery` / ILIKE token matching) with ORM joins.
+   - Semantic AI path uses OpenAI embeddings against pgvector tables + Vercel AI SDK to accurately rank and extract video moments.
+   - Search results are always grounded in database records. No hallucinated courses, lessons, or timestamps.
+
+4. **Two-Stage Timestamp Resolution**:
+   - Stage 1 (Chapters First): Search the `video_chapters` table for matching labels. If found, use chapter `startSeconds` and label.
+   - Stage 2 (Transcript Fallback): If no chapter matches, search `video_chunks` table and return the closest matching chunk `startSeconds`.
+
+5. **Video Embed Playback**:
+   - Video playback uses provider embeds (YouTube, Vimeo, Bunny) on the lesson page.
+   - Video results link to the lesson page with a `?t=<seconds>` query parameter to seek automatically on load.
+
+6. **Learner Progress & Bookmarks**:
+   - Progress records track `completed` lessons, `last_watched_second`, and `percentage` per learner.
+   - Bookmarks allow learners to save courses and lessons for quick access on `/my-learning`.
+
+7. **Product Analytics**:
+   - PostHog tracks key engagement events: `catalog_viewed`, `course_viewed`, `lesson_viewed`, `search_performed`, `video_played`, `video_progress`, and `lesson_completed`.
 
 ---
 
-# 10. The search config document
+# 7. Data schema specification (PostgreSQL + Drizzle)
 
-The Sanity Context document lets the user tune the agent without a code change. It carries a content scope filter that limits the visible types to the content ones, and instructions that hold the query guidance from section 11, kept short as deltas the schema does not already make obvious. Use dial-your-context to write it. If the Studio plugin is not available (section 12), create and edit this document by import or through the Sanity MCP. Edits to it reach the agent on the next request, but changes to the inline system prompt need a server restart.
+The database schema models the complete learning platform:
+
+- **`users`**: `id` (UUID/text, PK), `email` (unique), `password_hash`, `name`, `avatar_url`, `role` (`learner`, `instructor`, `admin`), `created_at`, `updated_at`.
+- **`sessions`**: `id` (PK), `user_id` (FK -> users.id), `token` (unique, hashed), `expires_at`, `created_at`.
+- **`categories`**: `id` (PK), `title`, `slug` (unique), `description`, `created_at`.
+- **`instructors`**: `id` (PK), `name`, `slug` (unique), `photo_url`, `expertise`, `bio`, `created_at`.
+- **`courses`**: `id` (PK), `title`, `slug` (unique), `summary`, `cover_image_url`, `level` (`beginner`, `intermediate`, `advanced`), `price`, `is_popular`, `student_count`, `instructor_id` (FK -> instructors.id), `category_id` (FK -> categories.id), `learning_outcomes` (JSON array: `[{ icon, title, description }]`), `is_published`, `created_at`, `updated_at`.
+- **`modules`**: `id` (PK), `course_id` (FK -> courses.id, onDelete: cascade), `title`, `summary`, `order_index` (integer), `created_at`.
+- **`lessons`**: `id` (PK), `module_id` (FK -> modules.id, onDelete: cascade), `title`, `slug` (unique), `video_url`, `thumbnail_url`, `duration_seconds`, `is_free_preview`, `notes` (text/markdown/JSON), `key_points` (JSON array of strings), `pro_tip` (text), `resources` (JSON array: `[{ type, title, description, url }]`), `order_index` (integer), `is_published`, `created_at`, `updated_at`.
+- **`videos`**: `id` (PK), `url` (unique), `provider` (`youtube`, `vimeo`, `bunny`), `provider_id`, `duration_seconds`, `created_at`.
+- **`video_chapters`**: `id` (PK), `video_id` (FK -> videos.id, onDelete: cascade), `start_seconds` (integer), `label` (text), `order_index` (integer).
+- **`video_chunks`**: `id` (PK), `video_id` (FK -> videos.id, onDelete: cascade), `start_seconds` (integer), `end_seconds` (integer), `text` (text), `embedding` (vector(1536) for OpenAI embeddings).
+- **`user_progress`**: `id` (PK), `user_id` (FK -> users.id, onDelete: cascade), `lesson_id` (FK -> lessons.id, onDelete: cascade), `is_completed` (boolean), `last_position_seconds` (integer), `updated_at`, unique(`user_id`, `lesson_id`).
+- **`user_bookmarks`**: `id` (PK), `user_id` (FK -> users.id, onDelete: cascade), `course_id` (FK -> courses.id, nullable), `lesson_id` (FK -> lessons.id, nullable), `created_at`.
 
 ---
 
-# 11. How search must behave
+# 8. Custom Authentication & Authorization
 
-Search is a full results page, not a compact widget and not a chatbox. Keep it behaving like this.
+1. **Authentication Flow**:
+   - Registration: Validates email format, verifies password strength, hashes password with `bcrypt` (12 rounds) or `argon2id`, creates user record, and establishes session.
+   - Login: Looks up user by email, verifies password hash, issues a secure random session token, stores hashed session in DB, sets HTTP-only session cookie.
+   - Logout: Invalidates session in database, clears cookie.
+   - Session Cookie: `vertex_session` with flags `HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000` (30 days).
 
-- Return all relevant results, ranked best first, with a count (for example, found 28 results across 8 courses) and a sort control that defaults to most relevant. Do not cap to a handful. When nothing fits, show an empty state that points to the full catalog.
-- Results come in two kinds, matching the design.
-  - A video result is a lesson's video matched at a specific moment. Carry the course (name and icon), the module and lesson label (for example, Lesson 5.1 in Data Fetching and Caching), a thumbnail, the clip length, a short description, and the matched second. Its action watches from that second on the lesson page.
-  - A lesson result is a lesson matched on its own topic. Carry the course, the module and lesson label, the lesson's key points, and a short description. Its action opens the lesson page.
-- For a query, search both ways and merge: match lessons on their topic (title and notes), and match video moments (chapters first, then transcript, per section 7). Rank by specificity, so a title that contains the exact concept beats a broad keyword hit.
-- Ground every result in real data. Never invent a course, lesson, timestamp, or count. The video documents stay an internal lookup, and a video result is always tied to the lesson that uses that video, never shown on its own.
-- Text match is token based, so wildcard your keywords and OR multiple words. Never match a whole phrase as one pattern. You cannot text match a Portable Text field directly, so match its plain text projection.
-- Put the critical query and ranking rules in both the inline system prompt and the Context document, because the model follows the system prompt more reliably.
+2. **Security & Middleware**:
+   - `proxy.ts` (or `middleware.ts`) inspects session cookie for protected paths (`/my-learning`, `/admin/*`).
+   - Role verification: `/admin/*` requires `role === 'admin' || role === 'instructor'`.
+   - Rate limiting on `/api/auth/login`, `/api/auth/register`, and `/api/search` using in-memory or Redis token bucket.
+
+---
+
+# 9. Custom CMS & Admin Dashboard (`/admin`)
+
+The `/admin` portal provides complete management over platform content:
+- **Course Management**: List, filter, create, edit, publish/unpublish courses with cover image uploads and learning outcome editors.
+- **Curriculum Builder**: Drag-and-drop or order-indexed reordering of modules and lessons within a course.
+- **Lesson Editor**: Rich text editor for lesson notes, video URL configuration, duration, preview toggles, key points, pro tips, and download resources.
+- **Instructor & Category Management**: CRUD operations for instructor profiles and taxonomy categories.
+- **Media & Ingestion Tool**: Interface to trigger video transcript ingestion, preview parsed chapters, and view chunk embeddings.
+
+---
+
+# 10. Search Implementation & AI Agent
+
+- **Search Route** (`/api/search`):
+  1. **Token Normalization**: Strip punctuation, extract keywords and synonyms.
+  2. **Fast Full-Text Database Search**: Query `lessons`, `courses`, `video_chapters`, and `video_chunks` using PostgreSQL full-text search (`tsvector` & trigram matching).
+  3. **Semantic Embedding Search**: When enabled or for ambiguous queries, compute query embedding via OpenAI and match top-K closest `video_chunks` using pgvector cosine distance `<=>`.
+  4. **AI SDK Tool Calling**: For complex queries, LLM synthesizes structured result cards via `return_search_results` tool.
+  5. **Caching**: In-memory LRU/TTL cache for repeated queries.
+  6. **Telemetry**: Capture `search_performed` event to PostHog with query, result count, and latency metrics.
+
+---
+
+# 11. Offline Video Ingestion Pipeline
+
+Offline tools in `scripts/ingest-video.ts`:
+1. Accepts a video URL (YouTube, Vimeo, Bunny).
+2. Extracts metadata, duration, and captions/transcript.
+3. Automatically detects or parses chapter markers.
+4. Splits the transcript into semantic timestamped chunks (15–45 seconds each).
+5. Computes vector embeddings for each chunk via OpenAI text-embedding-3-small.
+6. Upserts into `videos`, `video_chapters`, and `video_chunks` tables in PostgreSQL.
 
 ---
 
 # 12. Things that will trip you up
 
-You cannot infer these from the code, so keep them in mind.
-
-- The Context MCP only serves a dataset that has a deployed Studio application. A schema only deploy is not enough.
-- The `@sanity/context` Studio plugin may not support the Studio's current Sanity major version. When it does not, do not install it. Edit the Context document by import, and expect Conversation Insights to be unavailable until the plugin catches up.
-- Semantic search may be turned off. If `text::semanticSimilarity()` errors with embeddings not enabled, fall back to keyword match with wildcards. Turning embeddings on is a plan and billing decision.
-- The model follows the inline system prompt more reliably than the injected Context document instructions, so put the critical rules in both.
-- If the system prompt is a template literal, escape backticks inside it or the build fails.
-- The search route should cache initial context. Once it does, your instruction and prompt changes only take effect after a server restart.
-- Never return a whole transcript or chunks array to the model. It overflows the context window. Fetch only the filtered matches, a few per video.
-- The dataset is private. Keep the read token on the server, never expose it to the client, and fetch all content server side.
-- Keep project ids and keys in env, expose only client safe values to the browser, and keep a committed `.env.example` as the canonical list.
-- Clerk's secret key is server only. Only its publishable key may reach the browser, and protect private routes in Next.js middleware, not in client code.
-- Any write token, such as the one used to save progress, is server only and used only inside a server route. The browser never writes content or progress.
-- PostHog's project key is public by design and may reach the browser. Any private PostHog API key stays server only.
+- **Password Hashing in Edge vs Node Runtime**: bcrypt/argon2 use native binaries. Keep auth routes and password verification in the Node.js runtime (`export const runtime = "nodejs"`), not Edge runtime.
+- **Database Connection Pooling**: In serverless/Next.js environments, ensure PostgreSQL connections are pooled properly (e.g., using `postgres` / `pg-pool` / Neon serverless driver) to avoid exhausting connection limits.
+- **pgvector Extension**: Ensure `CREATE EXTENSION IF NOT EXISTS vector;` is executed in database migrations before creating vector columns.
+- **Database Migrations**: Always manage schema updates through Drizzle Kit migrations (`drizzle-kit generate` and `drizzle-kit migrate`).
+- **Session Expiration & Revocation**: Validate session timestamps on every authenticated server action; delete expired sessions periodically.
+- **Context Window Limits**: When querying transcript chunks for AI search, limit retrieved chunks to the top 3–5 matches per video. Never dump full transcripts into the prompt.
+- **Environment Variables**: Keep database credentials, JWT secrets, OpenAI keys, and PostHog private keys in `.env` (never exposed with `NEXT_PUBLIC_`). Keep a committed `.env.example`.
 
 ---
 
 # 13. Checks to run
 
-Run these from the correct workspace and report the real output. Never claim a check passed without running it.
-
-- In web: type check, lint, a production build when routes, config, or server code change, and the dev server.
-- In Studio: deploy the Studio application, which is required before the Context MCP will serve the dataset, deploy the schema, and import content and config documents.
-
-After you implement, run the type check and lint at minimum, add a build when routes, config, or server modules changed, and for search or ingestion work verify against the live MCP endpoint.
+Always run checks before reporting completion:
+- `npm run type-check` (in `web`): TypeScript type checking.
+- `npm run lint` (in `web`): ESLint verification.
+- `npm run build` (in `web`): Next.js production build check.
+- `npm test` (in `web`): Automated unit and integration tests.
+- Database migration check: Verify Drizzle schema and migrations match the database state.
 
 ---
 
 # 14. When in doubt
 
-Keep it small. Use the relevant skill. Preserve the server and client boundaries and the private token rule. Match the provided UI exactly. Get specifics from setup and config instead of hardcoding them. Save a prompt and get approval before coding. Run the checks. Share exact test steps.
+Keep implementations lean and robust. Follow Next.js App Router idioms. Maintain strict separation between server-only secrets and client-safe data. Match design references with pixel precision. Save an implementation prompt in `prompts/` and obtain user approval before executing major code changes.

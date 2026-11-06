@@ -6,9 +6,17 @@ import {
   Lightbulb,
   FileText,
   ExternalLink,
+  AlignLeft,
+  PenTool,
+  Sparkles,
+  MessageSquare,
 } from "lucide-react";
 import { PortableText, type PortableTextComponents } from "@portabletext/react";
 import posthog from "posthog-js";
+import { InteractiveTranscript, type TranscriptCue } from "./interactive-transcript";
+import { TimestampedNotes } from "./timestamped-notes";
+import { LessonCopilot } from "./lesson-copilot";
+import { LessonDiscussion } from "./lesson-discussion";
 
 interface Resource {
   _key?: string;
@@ -24,6 +32,10 @@ interface LessonContentTabsProps {
   proTip?: string;
   resources?: Resource[];
   lessonSlug?: string;
+  lessonTitle?: string;
+  courseTitle?: string;
+  transcriptCues?: TranscriptCue[];
+  chapters?: Array<{ startSeconds: number; label: string }>;
 }
 
 const portableTextComponents: PortableTextComponents = {
@@ -54,10 +66,14 @@ export function LessonContentTabs({
   proTip,
   resources = [],
   lessonSlug,
+  lessonTitle,
+  courseTitle,
+  transcriptCues,
+  chapters = [],
 }: LessonContentTabsProps) {
-  const [activeTab, setActiveTab] = useState<"content" | "notes">("content");
+  const [activeTab, setActiveTab] = useState<"content" | "copilot" | "transcript" | "notes" | "discussions">("content");
 
-  const handleTabChange = (tab: "content" | "notes") => {
+  const handleTabChange = (tab: "content" | "copilot" | "transcript" | "notes" | "discussions") => {
     setActiveTab(tab);
     posthog.capture("lesson_tab_switched", {
       tab_name: tab,
@@ -106,17 +122,18 @@ export function LessonContentTabs({
       {/* ──────────────────────────────────────────────────────────
          TABS NAVIGATION
          ────────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-8 border-b border-neutral-200/80 dark:border-neutral-800">
+      <div className="flex items-center gap-6 sm:gap-8 border-b border-neutral-200/80 dark:border-neutral-800">
         <button
           type="button"
           onClick={() => handleTabChange("content")}
-          className={`pb-3.5 text-sm font-semibold transition-all relative cursor-pointer ${
+          className={`pb-3.5 text-sm font-semibold transition-all relative cursor-pointer flex items-center gap-2 ${
             activeTab === "content"
               ? "text-[#E05A36]"
               : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
           }`}
         >
-          Lesson Content
+          <FileText className="h-4 w-4" />
+          <span>Lesson Content</span>
           {activeTab === "content" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E05A36] rounded-full" />
           )}
@@ -124,22 +141,71 @@ export function LessonContentTabs({
 
         <button
           type="button"
+          onClick={() => handleTabChange("copilot")}
+          className={`pb-3.5 text-sm font-semibold transition-all relative cursor-pointer flex items-center gap-2 ${
+            activeTab === "copilot"
+              ? "text-[#E05A36]"
+              : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
+          }`}
+        >
+          <Sparkles className="h-4 w-4" />
+          <span>Copilot AI</span>
+          {activeTab === "copilot" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E05A36] rounded-full" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange("transcript")}
+          className={`pb-3.5 text-sm font-semibold transition-all relative cursor-pointer flex items-center gap-2 ${
+            activeTab === "transcript"
+              ? "text-[#E05A36]"
+              : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
+          }`}
+        >
+          <AlignLeft className="h-4 w-4" />
+          <span>Transcript</span>
+          {activeTab === "transcript" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E05A36] rounded-full" />
+          )}
+        </button>
+
+        <button
+          type="button"
           onClick={() => handleTabChange("notes")}
-          className={`pb-3.5 text-sm font-semibold transition-all relative cursor-pointer ${
+          className={`pb-3.5 text-sm font-semibold transition-all relative cursor-pointer flex items-center gap-2 ${
             activeTab === "notes"
               ? "text-[#E05A36]"
               : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
           }`}
         >
-          Notes
+          <PenTool className="h-4 w-4" />
+          <span>Notes</span>
           {activeTab === "notes" && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E05A36] rounded-full" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange("discussions")}
+          className={`pb-3.5 text-sm font-semibold transition-all relative cursor-pointer flex items-center gap-2 ${
+            activeTab === "discussions"
+              ? "text-[#E05A36]"
+              : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100"
+          }`}
+        >
+          <MessageSquare className="h-4 w-4" />
+          <span>Discussions</span>
+          {activeTab === "discussions" && (
             <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#E05A36] rounded-full" />
           )}
         </button>
       </div>
 
-      {activeTab === "content" ? (
-        <div className="space-y-10">
+      {activeTab === "content" && (
+        <div className="space-y-10 animate-in fade-in duration-150">
           {/* ──────────────────────────────────────────────────────────
              OVERVIEW SECTION
              ────────────────────────────────────────────────────────── */}
@@ -244,23 +310,58 @@ export function LessonContentTabs({
             </section>
           )}
         </div>
-      ) : (
-        /* ──────────────────────────────────────────────────────────
-           NOTES TAB
-           ────────────────────────────────────────────────────────── */
-        <section className="bg-neutral-50/60 dark:bg-neutral-900/40 rounded-2xl p-8 border border-neutral-200/80 dark:border-neutral-800">
-          <h3 className="font-display text-xl font-bold text-neutral-900 dark:text-neutral-100 mb-3">
-            Personal Notes
-          </h3>
-          <p className="text-neutral-500 dark:text-neutral-400 text-sm leading-relaxed mb-4">
-            Take notes while watching this lesson. Notes are saved automatically to your workspace profile.
-          </p>
-          <textarea
-            placeholder="Type your notes here..."
-            rows={6}
-            className="w-full rounded-xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-4 text-sm text-neutral-800 dark:text-neutral-200 placeholder:text-neutral-400 dark:placeholder:text-neutral-500 focus:border-primary-400 focus:outline-hidden focus:ring-2 focus:ring-primary-100 resize-none shadow-2xs"
+      )}
+
+      {/* ──────────────────────────────────────────────────────────
+         COPILOT AI TAB
+         ────────────────────────────────────────────────────────── */}
+      {activeTab === "copilot" && (
+        <div className="animate-in fade-in duration-150">
+          <LessonCopilot
+            lessonSlug={lessonSlug}
+            lessonTitle={lessonTitle}
+            courseTitle={courseTitle}
           />
-        </section>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────
+         TRANSCRIPT TAB
+         ────────────────────────────────────────────────────────── */}
+      {activeTab === "transcript" && (
+        <div className="animate-in fade-in duration-150">
+          <InteractiveTranscript
+            cues={transcriptCues}
+            chapters={chapters}
+            lessonTitle={lessonTitle}
+          />
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────
+         NOTES TAB
+         ────────────────────────────────────────────────────────── */}
+      {activeTab === "notes" && (
+        <div className="animate-in fade-in duration-150">
+          <TimestampedNotes
+            lessonSlug={lessonSlug || "lesson"}
+            lessonTitle={lessonTitle}
+            courseTitle={courseTitle}
+          />
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────
+         DISCUSSIONS TAB
+         ────────────────────────────────────────────────────────── */}
+      {activeTab === "discussions" && (
+        <div className="animate-in fade-in duration-150">
+          <LessonDiscussion
+            lessonSlug={lessonSlug}
+            courseSlug={courseTitle ? courseTitle.toLowerCase().replace(/\s+/g, "-") : undefined}
+            lessonTitle={lessonTitle}
+          />
+        </div>
       )}
     </div>
   );

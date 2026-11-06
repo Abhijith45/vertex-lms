@@ -75,7 +75,7 @@ export const getCourseBySlugQuery = defineQuery(`
         duration,
         freePreview,
         videoUrl,
-        poster
+        "poster": coalesce(poster, thumbnail)
       }
     }
   }
@@ -87,7 +87,7 @@ export const getLessonBySlugQuery = defineQuery(`
     title,
     "slug": slug.current,
     videoUrl,
-    poster,
+    "poster": coalesce(poster, thumbnail),
     duration,
     freePreview,
     studentCount,
@@ -104,7 +104,7 @@ export const getLessonWithCourseQuery = defineQuery(`
     title,
     "slug": slug.current,
     videoUrl,
-    poster,
+    "poster": coalesce(poster, thumbnail),
     duration,
     freePreview,
     studentCount,
