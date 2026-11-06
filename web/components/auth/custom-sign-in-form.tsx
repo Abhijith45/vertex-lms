@@ -150,9 +150,9 @@ export function CustomSignInForm() {
         ? "second_factor"
         : "email_code";
     let signedIn = false;
-    const continueWithExistingSession = () => {
+    const finishSignedIn = (completion: "session_exists" | "session_active") => {
       signedIn = true;
-      posthog.capture("sign_in_completed", { method, completion: "session_exists" });
+      posthog.capture("sign_in_completed", { method, completion });
       redirectTo(redirectUrl);
     };
 
@@ -164,7 +164,7 @@ export function CustomSignInForm() {
 
       if (error) {
         if (isSessionExistsError(error)) {
-          continueWithExistingSession();
+          finishSignedIn("session_exists");
         } else {
           setFormError(error.message || "Invalid verification code.");
         }
@@ -179,13 +179,11 @@ export function CustomSignInForm() {
           posthog.capture("sign_in_completed", { method, completion: "finalized" });
         }
       } else if (clerk.isSignedIn) {
-        signedIn = true;
-        posthog.capture("sign_in_completed", { method, completion: "session_active" });
-        redirectTo(redirectUrl);
+        finishSignedIn("session_active");
       }
     } catch (err: unknown) {
       if (isSessionExistsError(err)) {
-        continueWithExistingSession();
+        finishSignedIn("session_exists");
         return;
       }
       const e = err as { message?: string };
