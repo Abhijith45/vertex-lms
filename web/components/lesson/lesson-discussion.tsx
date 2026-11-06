@@ -48,28 +48,48 @@ export function LessonDiscussion({
   const [replyContent, setReplyContent] = useState("");
   const [isReplying, setIsReplying] = useState(false);
 
-  const fetchThreads = useCallback(async (sort: DiscussionSort) => {
-    let isMounted = true;
-    try {
-      setIsLoading(true);
-      const res = await fetch(`/api/discussions?lessonSlug=${lessonSlug}&sort=${sort}`);
-      if (!res.ok) throw new Error("Failed to fetch discussions");
-      const data = await res.json();
-      if (isMounted) {
+  const fetchThreads = useCallback(
+    async (sortOrder: DiscussionSort) => {
+      try {
+        setIsLoading(true);
+        const res = await fetch(`/api/discussions?lessonSlug=${lessonSlug}&sort=${sortOrder}`);
+        if (!res.ok) throw new Error("Failed to fetch discussions");
+        const data = await res.json();
         setThreads(data.threads || []);
-      }
-    } catch (err) {
-      console.error("Error loading discussions:", err);
-    } finally {
-      if (isMounted) {
+      } catch (err) {
+        console.error("Error loading discussions:", err);
+      } finally {
         setIsLoading(false);
       }
-    }
-  }, [lessonSlug]);
+    },
+    [lessonSlug]
+  );
 
   useEffect(() => {
-    fetchThreads(sortBy);
-  }, [fetchThreads, sortBy]);
+    let isMounted = true;
+    async function load() {
+      try {
+        setIsLoading(true);
+        const res = await fetch(`/api/discussions?lessonSlug=${lessonSlug}&sort=${sortBy}`);
+        if (!res.ok) throw new Error("Failed to fetch discussions");
+        const data = await res.json();
+        if (isMounted) {
+          setThreads(data.threads || []);
+        }
+      } catch (err) {
+        console.error("Error loading discussions:", err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [lessonSlug, sortBy]);
 
   const handleSortChange = (newSort: DiscussionSort) => {
     setSortBy(newSort);
