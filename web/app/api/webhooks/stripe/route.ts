@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import {
+  constructStripeWebhookEvent,
   verifyStripeWebhookSignature,
   type StripeEventPayload,
 } from "@/lib/stripe";
@@ -11,30 +12,41 @@ import {
 } from "@/lib/entitlements";
 import { getPostHogClient } from "@/lib/posthog-server";
 
+export const runtime = "nodejs";
+
 export async function POST(req: Request) {
   try {
     const rawBody = await req.text();
     const signature = req.headers.get("stripe-signature");
 
-    // 1. Verify Cryptographic Stripe Signature
-    const isVerified = verifyStripeWebhookSignature(rawBody, signature);
-    if (!isVerified) {
-      console.warn("Stripe webhook signature verification failed.");
-      return NextResponse.json(
-        { error: "Invalid webhook signature" },
-        { status: 400 }
-      );
+    // 1. Verify Cryptographic Stripe Signature (Stripe SDK or HMAC fallback)
+    let event: StripeEventPayload | null = null;
+    const constructed = constructStripeWebhookEvent(rawBody, signature);
+
+    if (constructed) {
+      event = constructed as unknown as StripeEventPayload;
+    } else {
+      // Direct HMAC verification fallback
+      const isHmacVerified = verifyStripeWebhookSignature(rawBody, signature);
+      if (!isHmacVerified) {
+        console.warn("Stripe webhook signature verification failed.");
+        return NextResponse.json(
+          { error: "Invalid webhook signature" },
+          { status: 400 }
+        );
+      }
+      try {
+        event = JSON.parse(rawBody) as StripeEventPayload;
+      } catch {
+        return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+      }
     }
 
-    // 2. Parse Event JSON
-    let event: StripeEventPayload;
-    try {
-      event = JSON.parse(rawBody);
-    } catch {
-      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+    if (!event || !event.id) {
+      return NextResponse.json({ error: "Unable to parse Stripe event" }, { status: 400 });
     }
 
-    // 3. Idempotency Guard (Guarantee duplicate delivery retries are safely ignored)
+    // 2. Idempotency Guard (Guarantee duplicate delivery retries are safely ignored)
     if (isIdempotencyKeyProcessed(event.id)) {
       return NextResponse.json(
         {
@@ -49,7 +61,7 @@ export async function POST(req: Request) {
     // Record Event ID to prevent future duplicate processing
     recordIdempotencyKey(event.id);
 
-    // 4. Handle Event Types
+    // 3. Handle Event Types
     if (event.type === "checkout.session.completed") {
       const session = event.data?.object;
       const metadata = session?.metadata || {};

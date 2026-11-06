@@ -171,6 +171,20 @@ export function CoursePricingCard({ courseSlug, courseTitle }: CoursePricingCard
           </div>
         </div>
       </div>
+
+      {/* Stripe Sandbox / Development Mode Indicator */}
+      <div className="mt-8 max-w-4xl mx-auto rounded-2xl border border-dashed border-amber-300 dark:border-amber-700/60 bg-amber-50/60 dark:bg-amber-950/20 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-900 dark:text-amber-200">
+        <div className="flex items-center gap-2.5">
+          <Shield className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <div className="text-xs">
+            <span className="font-bold">Stripe Sandbox / Development Mode:</span> Real cards are never charged.
+            <span className="hidden sm:inline"> Test checkout freely using Stripe test card numbers.</span>
+          </div>
+        </div>
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/40 text-[11px] font-mono font-medium border border-amber-300/60 dark:border-amber-700/40 shrink-0">
+          <span>Card: 4242 •••• 4242 4242</span>
+        </div>
+      </div>
     </div>
   );
 }

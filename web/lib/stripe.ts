@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import Stripe from "stripe";
 
 export interface StripeEventPayload {
   id: string;
@@ -23,6 +24,89 @@ export interface StripeEventPayload {
 
 const DEFAULT_WEBHOOK_SECRET =
   process.env.STRIPE_WEBHOOK_SECRET || "whsec_vertex_production_test_secret_2026";
+
+let cachedStripeInstance: Stripe | null = null;
+
+/**
+ * Returns a configured Stripe SDK client or null if no valid secret key is set.
+ */
+export function getStripeClient(apiKey?: string): Stripe | null {
+  const key = apiKey || process.env.STRIPE_SECRET_KEY;
+  if (!key || key === "mock-key" || !key.startsWith("sk_")) {
+    return null;
+  }
+
+  if (!apiKey && cachedStripeInstance) {
+    return cachedStripeInstance;
+  }
+
+  const client = new Stripe(key, {
+    typescript: true,
+  });
+
+  if (!apiKey) {
+    cachedStripeInstance = client;
+  }
+
+  return client;
+}
+
+/**
+ * Checks whether Stripe is configured with a valid secret key.
+ */
+export function isStripeConfigured(): boolean {
+  const key = process.env.STRIPE_SECRET_KEY;
+  return Boolean(key && key !== "mock-key" && key.startsWith("sk_"));
+}
+
+/**
+ * Checks whether Stripe is operating in Test / Sandbox mode.
+ * Returns true if the key begins with sk_test_ or if no live key is set in non-production.
+ */
+export function isStripeTestMode(): boolean {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (key && key.startsWith("sk_test_")) return true;
+  if (key && key.startsWith("sk_live_")) return false;
+  return true; // Defaults to test/sandbox development mode
+}
+
+/**
+ * Checks whether Stripe is operating with real live keys.
+ */
+export function isStripeLiveMode(): boolean {
+  const key = process.env.STRIPE_SECRET_KEY;
+  return Boolean(key && key.startsWith("sk_live_"));
+}
+
+/**
+ * Safely constructs and validates a Stripe webhook event, using either
+ * the official Stripe SDK or the cryptographic HMAC fallback.
+ */
+export function constructStripeWebhookEvent(
+  rawBody: string,
+  signature: string | null,
+  secret = process.env.STRIPE_WEBHOOK_SECRET || DEFAULT_WEBHOOK_SECRET
+): StripeEventPayload | Stripe.Event | null {
+  if (!signature || !rawBody) return null;
+
+  const stripe = getStripeClient();
+  if (stripe && secret) {
+    try {
+      return stripe.webhooks.constructEvent(rawBody, signature, secret);
+    } catch {
+      // Fall through to HMAC fallback
+    }
+  }
+
+  const isVerified = verifyStripeWebhookSignature(rawBody, signature, secret);
+  if (!isVerified) return null;
+
+  try {
+    return JSON.parse(rawBody) as StripeEventPayload;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Verifies the authenticity of a Stripe webhook payload against its signature header.

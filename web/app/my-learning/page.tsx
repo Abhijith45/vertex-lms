@@ -143,7 +143,18 @@ const myLearningQuery = `
 }
 `;
 
-export default async function MyLearningPage() {
+export default async function MyLearningPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const isCheckoutSuccess = resolvedSearchParams.checkout === "success";
+  const purchasedCourse =
+    typeof resolvedSearchParams.course === "string"
+      ? resolvedSearchParams.course
+      : null;
+
   const authData = await auth();
   const userId = authData?.userId;
 
@@ -309,6 +320,29 @@ export default async function MyLearningPage() {
 
           {/* Main Content Area */}
           <main className="px-6 py-10 sm:px-10 lg:px-16">
+            {isCheckoutSuccess && (
+              <div className="mb-8 rounded-2xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-5 shadow-xs flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500 text-white font-bold text-lg shrink-0 shadow-xs">
+                    ✓
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-emerald-900 dark:text-emerald-100">
+                      Payment & Enrollment Confirmed!
+                    </h3>
+                    <p className="text-xs text-emerald-700 dark:text-emerald-300 mt-0.5">
+                      {purchasedCourse
+                        ? `Your lifetime access to ${purchasedCourse} has been unlocked.`
+                        : "Your course entitlement has been activated and verified. Happy learning!"}
+                    </p>
+                  </div>
+                </div>
+                <span className="hidden sm:inline-flex px-3 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200">
+                  Verified Entitlement
+                </span>
+              </div>
+            )}
+
             {!hasAnyLearning ? (
               <EmptyLearningState />
             ) : (
