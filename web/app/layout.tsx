@@ -27,7 +27,11 @@ export const metadata: Metadata = {
     "A modern learning platform with intelligent content search, video lessons, and structured courses.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <ClerkProvider appearance={{ variables: { colorPrimary: "#E05A36" } }}>
       <html
