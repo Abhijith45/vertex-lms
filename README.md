@@ -11,10 +11,11 @@
 [![Stripe](https://img.shields.io/badge/Stripe-SaaS%20Billing-008CDD?logo=stripe)](https://stripe.com/)
 [![PostHog](https://img.shields.io/badge/PostHog-Product%20Analytics-1D4ED8?logo=posthog)](https://posthog.com/)
 [![Tests](https://img.shields.io/badge/Tests-214%20Passing%20(77%20Suites)-success)](#-automated-testing--quality-benchmarks)
+[![CI/CD Pipeline](https://img.shields.io/badge/CI%2FCD-Automated%20Vercel%20Delivery-brightgreen?logo=github-actions)](DEPLOYMENT.md)
 
 **A production-grade, AI-powered learning management platform featuring natural-language video search, temporal sliding-window AI copilot, interactive synchronized transcript playback, HMAC-SHA256 verifiable credentials, and enterprise SaaS monetization.**
 
-[Live Demo](https://vertex-lms.vercel.app) · [Resume & Portfolio Talking Points](PORTFOLIO_RESUME_GUIDE.md) · [System Architecture](#-system-architecture--diagrams) · [Legal & Compliance](#-full-legal-compliance--seo-suite)
+[Live Demo](https://vertex-lms.vercel.app) · [Resume & Portfolio Talking Points](PORTFOLIO_RESUME_GUIDE.md) · [CI/CD & Deployment Guide](DEPLOYMENT.md) · [System Architecture](#-system-architecture--diagrams) · [Legal & Compliance](#-full-legal-compliance--seo-suite)
 
 </div>
 
