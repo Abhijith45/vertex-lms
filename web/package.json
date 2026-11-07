@@ -7,7 +7,7 @@
     "build": "next build",
     "type-check": "tsc --noEmit",
     "lint": "eslint",
-    "test": "node --test test/lesson-utils.test.ts test/video-controls.test.ts test/search-flow.test.ts test/cache.test.ts test/search-openai.test.ts test/posthog-events.test.ts test/search-thumbnails.test.ts test/two-stage-timestamp.test.ts test/auth-gate.test.ts test/theme.test.ts test/bookmarks.test.ts test/compliance-routes.test.ts test/otp-input.test.ts test/url-redirect.test.ts test/interactive-media.test.ts test/copilot-rag.test.ts test/gamification-social.test.ts test/saas-monetization.test.ts test/notifications.test.ts",
+    "test": "tsx --test test/lesson-utils.test.ts test/video-controls.test.ts test/search-flow.test.ts test/cache.test.ts test/search-openai.test.ts test/posthog-events.test.ts test/search-thumbnails.test.ts test/two-stage-timestamp.test.ts test/auth-gate.test.ts test/theme.test.ts test/bookmarks.test.ts test/compliance-routes.test.ts test/otp-input.test.ts test/url-redirect.test.ts test/interactive-media.test.ts test/copilot-rag.test.ts test/gamification-social.test.ts test/saas-monetization.test.ts test/notifications.test.ts",
     "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
@@ -37,6 +37,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5"
   }
 }
