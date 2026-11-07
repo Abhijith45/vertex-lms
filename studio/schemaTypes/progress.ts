@@ -48,6 +48,28 @@ export const progress = defineType({
         }),
       ],
     }),
+    defineField({
+      name: 'purchasedCourses',
+      title: 'Purchased Courses (Lifetime)',
+      type: 'array',
+      of: [
+        defineArrayMember({
+          type: 'reference',
+          to: [{ type: 'course' }],
+        }),
+      ],
+    }),
+    defineField({
+      name: 'subscription',
+      title: 'Active Subscription',
+      type: 'object',
+      fields: [
+        defineField({ name: 'plan', title: 'Plan', type: 'string', options: { list: ['monthly', 'yearly'] } }),
+        defineField({ name: 'status', title: 'Status', type: 'string', options: { list: ['active', 'past_due', 'unpaid', 'canceled'] } }),
+        defineField({ name: 'currentPeriodEnd', title: 'Current Period End', type: 'datetime' }),
+        defineField({ name: 'isAllAccess', title: 'Is All-Access Pass', type: 'boolean' }),
+      ],
+    }),
   ],
   preview: {
     select: {

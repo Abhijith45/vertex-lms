@@ -27,7 +27,7 @@ import posthog from "posthog-js";
 import { AuthPromptModal, type PromptModalMode } from "./auth-prompt-modal";
 import { useLessonPlayback } from "./lesson-playback-context";
 import { getFullPlaybackAccessState } from "@/lib/utils/auth-gate";
-import { evaluatePlaybackAccess } from "@/lib/entitlements";
+import { evaluatePlaybackAccess, type PlaybackAccessDecision } from "@/lib/entitlements";
 
 interface VideoEmbedProps {
   videoUrl?: string;
@@ -109,13 +109,34 @@ export function VideoEmbed({
   // Entitlement & Access state: evaluate auth, free-preview, and payment requirements
   const [modalMode, setModalMode] = useState<PromptModalMode>("AUTH");
   const [showPromptModal, setShowPromptModal] = useState(false);
+  const [remoteDecision, setRemoteDecision] = useState<PlaybackAccessDecision | null>(null);
 
-  const decision = evaluatePlaybackAccess({
+  // Hydrate entitlements from server on mount / login
+  useEffect(() => {
+    if (isSignedIn && user?.id) {
+      let isMounted = true;
+      fetch(`/api/entitlements?courseSlug=${encodeURIComponent(courseSlug || "")}&lessonIndex=${lessonIndex || 0}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (isMounted && data?.decision) {
+            setRemoteDecision(data.decision);
+          }
+        })
+        .catch(() => {});
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [isSignedIn, user?.id, courseSlug, lessonIndex]);
+
+  const localDecision = evaluatePlaybackAccess({
     userId: user?.id,
     courseSlug: courseSlug || "",
     lessonIndex,
     isExplicitFreePreview: Boolean(freePreview),
   });
+
+  const decision = remoteDecision?.allowed ? remoteDecision : localDecision;
 
   const accessState = getFullPlaybackAccessState({
     auth: {

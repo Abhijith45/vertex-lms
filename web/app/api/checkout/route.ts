@@ -8,6 +8,8 @@ import {
 } from "@/lib/entitlements";
 import { getPostHogClient } from "@/lib/posthog-server";
 import { getStripeClient, isStripeConfigured, isStripeTestMode } from "@/lib/stripe";
+import { serverClient } from "@/sanity/lib/client";
+import { writeClient } from "@/sanity/lib/write-client";
 
 export const runtime = "nodejs";
 
@@ -103,6 +105,83 @@ export async function POST(req: Request) {
       });
     } else if (courseSlug) {
       grantCourseAccess(recipientUserId, courseSlug);
+    }
+
+    // Persist entitlement to Sanity so it survives logout and serverless container restarts
+    try {
+      if (userId) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        let progressDoc: any = await serverClient.fetch(
+          `*[_type == "progress" && clerkUserId == $userId][0]`,
+          { userId },
+          { cache: "no-store" }
+        );
+
+        if (!progressDoc) {
+          progressDoc = await writeClient.create({
+            _type: "progress",
+            clerkUserId: userId,
+            completedLessons: [],
+            resumePositions: [],
+            bookmarkedCourses: [],
+            purchasedCourses: [],
+          });
+        }
+
+        const tx = writeClient.transaction();
+        if (tier === "all-access") {
+          tx.patch(progressDoc._id, (p) =>
+            p.set({
+              subscription: {
+                plan: "yearly",
+                status: "active",
+                currentPeriodEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                isAllAccess: true,
+              },
+            })
+          );
+        } else if (tier === "monthly") {
+          tx.patch(progressDoc._id, (p) =>
+            p.set({
+              subscription: {
+                plan: "monthly",
+                status: "active",
+                currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                isAllAccess: true,
+              },
+            })
+          );
+        } else if (courseSlug) {
+          // Find course doc
+          const courseDoc = await serverClient.fetch<{ _id: string } | null>(
+            `*[_type == "course" && slug.current == $courseSlug][0]{ _id }`,
+            { courseSlug },
+            { cache: "no-store" }
+          );
+
+          if (courseDoc?._id) {
+            const existingPurchased = (progressDoc.purchasedCourses || []).map(
+              (ref: { _ref: string }) => ref?._ref
+            );
+            if (!existingPurchased.includes(courseDoc._id)) {
+              tx.patch(progressDoc._id, (p) =>
+                p
+                  .setIfMissing({ purchasedCourses: [] })
+                  .append("purchasedCourses", [
+                    {
+                      _type: "reference",
+                      _ref: courseDoc._id,
+                      _key: Math.random().toString(36).substring(2, 9),
+                    },
+                  ])
+              );
+            }
+          }
+        }
+        await tx.commit();
+      }
+    } catch (persistErr) {
+      console.warn("Failed to persist entitlement to Sanity:", persistErr);
     }
 
     try {

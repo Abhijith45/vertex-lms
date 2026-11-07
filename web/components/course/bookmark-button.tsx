@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Bookmark, Loader2 } from "lucide-react";
+import { Bookmark } from "lucide-react";
 import { useAuth, useClerk } from "@clerk/nextjs";
 import posthog from "posthog-js";
 
@@ -25,7 +25,6 @@ export function BookmarkButton({
   const { isSignedIn } = useAuth();
   const { openSignIn } = useClerk();
   const [isBookmarked, setIsBookmarked] = useState<boolean>(initialIsBookmarked);
-  const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Synchronize state if initialIsBookmarked changes from SSR
   useEffect(() => {
@@ -44,7 +43,7 @@ export function BookmarkButton({
     const nextState = !isBookmarked;
     const previousState = isBookmarked;
 
-    // 1. Optimistic UI update
+    // 1. Instant 0ms Optimistic UI update
     setIsBookmarked(nextState);
     if (onToggle) {
       onToggle(nextState);
@@ -58,8 +57,7 @@ export function BookmarkButton({
       source: "bookmark_button",
     });
 
-    // 3. Persist to Sanity via server route
-    setIsSaving(true);
+    // 3. Persist to Sanity via server route non-blockingly
     try {
       const res = await fetch("/api/bookmarks", {
         method: "POST",
@@ -75,21 +73,19 @@ export function BookmarkButton({
       }
 
       const data = await res.json();
-      if (typeof data.bookmarked === "boolean") {
+      if (typeof data.bookmarked === "boolean" && data.bookmarked !== nextState) {
         setIsBookmarked(data.bookmarked);
         if (onToggle) {
           onToggle(data.bookmarked);
         }
       }
     } catch (err) {
-      console.error("Error toggling bookmark:", err);
-      // Revert optimistic update on failure
+      console.error("Error toggling bookmark in background:", err);
+      // Revert optimistic update only on actual network error
       setIsBookmarked(previousState);
       if (onToggle) {
         onToggle(previousState);
       }
-    } finally {
-      setIsSaving(false);
     }
   }
 
@@ -99,7 +95,6 @@ export function BookmarkButton({
     <button
       type="button"
       onClick={handleBookmarkToggle}
-      disabled={isSaving}
       className={`inline-flex items-center gap-2 rounded-xl border transition-all duration-200 cursor-pointer active:scale-[0.98] select-none ${
         isSmall
           ? "px-3 py-1.5 text-xs font-medium"
@@ -112,22 +107,16 @@ export function BookmarkButton({
       aria-pressed={isBookmarked}
       aria-label={isBookmarked ? "Remove bookmark" : "Bookmark this course"}
     >
-      {isSaving ? (
-        <Loader2
-          className={`${isSmall ? "h-3.5 w-3.5" : "h-4 w-4 sm:h-5 sm:w-5"} animate-spin text-primary-500`}
-        />
-      ) : (
-        <Bookmark
-          className={`${
-            isSmall ? "h-3.5 w-3.5" : "h-4 w-4 sm:h-5 sm:w-5"
-          } transition-colors ${
-            isBookmarked
-              ? "fill-primary-500 text-primary-500 dark:fill-primary-400 dark:text-primary-400"
-              : "text-neutral-700 dark:text-neutral-300"
-          }`}
-          strokeWidth={1.75}
-        />
-      )}
+      <Bookmark
+        className={`${
+          isSmall ? "h-3.5 w-3.5" : "h-4 w-4 sm:h-5 sm:w-5"
+        } transition-colors ${
+          isBookmarked
+            ? "fill-primary-500 text-primary-500 dark:fill-primary-400 dark:text-primary-400"
+            : "text-neutral-700 dark:text-neutral-300"
+        }`}
+        strokeWidth={1.75}
+      />
       <span>{isBookmarked ? "Bookmarked" : "Bookmark"}</span>
     </button>
   );

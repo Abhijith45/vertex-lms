@@ -237,4 +237,116 @@ describe("Video Authentication Gating", () => {
       assert.equal(modalOpen, false, "Auth modal should not open for signed-in user");
     });
   });
+
+  describe("Senior System Designer: Cross-Session Entitlement Persistence & Re-Login", () => {
+    test("Test Case 1: Post-login persistence — user who purchased course retains lifetime access across sessions", () => {
+      resetEntitlementsForTesting();
+      const testUser = "user_lifetime_learner_42";
+      const testCourse = "nextjs-app-router-in-depth";
+
+      // Session A: User purchases course
+      grantCourseAccess(testUser, testCourse);
+
+      // Verify Session A access
+      const sessionADecision = evaluatePlaybackAccess({
+        userId: testUser,
+        courseSlug: testCourse,
+        lessonIndex: 5, // Lesson 5 (beyond free preview)
+      });
+      assert.equal(sessionADecision.allowed, true);
+      assert.equal(sessionADecision.reason, "LIFETIME_PURCHASE");
+
+      // Session B: User logs out and re-logs in
+      // Entitlement must evaluate to true without prompting payment
+      const sessionBDecision = evaluatePlaybackAccess({
+        userId: testUser,
+        courseSlug: testCourse,
+        lessonIndex: 8,
+      });
+      assert.equal(sessionBDecision.allowed, true);
+      assert.equal(sessionBDecision.reason, "LIFETIME_PURCHASE");
+    });
+
+    test("Test Case 2: Subscription continuity across re-login for All-Access Yearly", () => {
+      resetEntitlementsForTesting();
+      const subscriber = "user_yearly_sub_99";
+
+      // Granted annual pass
+      grantAllAccess(subscriber);
+
+      // Check access on any course (e.g. course-ai-rag)
+      const decision = evaluatePlaybackAccess({
+        userId: subscriber,
+        courseSlug: "advanced-ai-rag-architectures",
+        lessonIndex: 12,
+      });
+      assert.equal(decision.allowed, true);
+      assert.equal(decision.reason, "ACTIVE_SUBSCRIPTION");
+    });
+
+    test("Test Case 3: Subscription Expiration & 3-Day Grace Period", () => {
+      resetEntitlementsForTesting();
+      const userPastDue = "user_past_due_77";
+
+      // Setup past_due subscription that ended 1 day ago (within 3-day grace period)
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      setSubscription({
+        userId: userPastDue,
+        plan: "monthly",
+        status: "past_due",
+        currentPeriodEnd: oneDayAgo,
+      });
+
+      // Still in grace period
+      const graceDecision = evaluatePlaybackAccess({
+        userId: userPastDue,
+        courseSlug: "system-design-in-depth",
+        lessonIndex: 4,
+      });
+      assert.equal(graceDecision.allowed, true);
+      assert.equal(graceDecision.reason, "GRACE_PERIOD");
+      assert.ok(graceDecision.gracePeriodExpiresAt);
+
+      // 4 days later: grace period expired
+      const fourDaysLater = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+      const expiredDecision = evaluatePlaybackAccess({
+        userId: userPastDue,
+        courseSlug: "system-design-in-depth",
+        lessonIndex: 4,
+        now: fourDaysLater,
+      });
+      assert.equal(expiredDecision.allowed, false);
+      assert.equal(expiredDecision.reason, "SUBSCRIPTION_EXPIRED");
+    });
+
+    test("Test Case 4: Free Preview Rule Consistency — Lesson 1 & 2 free, Lesson 3 paywalled", () => {
+      resetEntitlementsForTesting();
+      const unpaidUser = "user_free_preview_01";
+      const courseSlug = "docker-kubernetes-production";
+
+      const lesson1 = evaluatePlaybackAccess({
+        userId: unpaidUser,
+        courseSlug,
+        lessonIndex: 1,
+      });
+      assert.equal(lesson1.allowed, true);
+      assert.equal(lesson1.reason, "FREE_PREVIEW");
+
+      const lesson2 = evaluatePlaybackAccess({
+        userId: unpaidUser,
+        courseSlug,
+        lessonIndex: 2,
+      });
+      assert.equal(lesson2.allowed, true);
+      assert.equal(lesson2.reason, "FREE_PREVIEW");
+
+      const lesson3 = evaluatePlaybackAccess({
+        userId: unpaidUser,
+        courseSlug,
+        lessonIndex: 3,
+      });
+      assert.equal(lesson3.allowed, false);
+      assert.equal(lesson3.reason, "PAYWALL_COURSE");
+    });
+  });
 });

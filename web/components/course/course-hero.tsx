@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   ChevronRight,
@@ -11,6 +11,7 @@ import {
   BarChart2,
   Play,
   RotateCcw,
+  Loader2,
 } from "lucide-react";
 import posthog from "posthog-js";
 import { CourseCoverArt } from "./course-cover-art";
@@ -61,6 +62,45 @@ export function CourseHero({
     ctaLabel = "Continue Learning";
     CtaIcon = Play;
   }
+
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  const handleStartCourse = () => {
+    if (isNavigating) return;
+    setIsNavigating(true);
+
+    posthog.capture(progressPercentage > 0 ? "resume_used" : "course_started", {
+      course_slug: course.slug,
+      course_title: course.title,
+      continue_url: continueLearningUrl,
+      progress_percentage: progressPercentage,
+      source: "course_hero",
+    });
+
+    // Auto-enroll in "My Learning" if not already started
+    if (progressPercentage === 0) {
+      try {
+        const firstLessonSlug = course.modules?.[0]?.lessons?.[0]?.slug;
+        const targetSlug =
+          typeof firstLessonSlug === "object"
+            ? firstLessonSlug?.current
+            : firstLessonSlug;
+
+        if (targetSlug) {
+          fetch("/api/progress", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              lessonSlug: targetSlug,
+              courseSlug: course.slug,
+              positionSeconds: 0,
+              completed: false,
+            }),
+          }).catch(() => {});
+        }
+      } catch {}
+    }
+  };
   // Format level string (e.g. "intermediate" -> "Intermediate")
   const levelDisplay = course.level
     ? course.level.charAt(0).toUpperCase() + course.level.slice(1)
@@ -152,19 +192,23 @@ export function CourseHero({
           <div className="flex flex-wrap items-center gap-4">
             <Link
               href={continueLearningUrl}
-              onClick={() => {
-                posthog.capture(progressPercentage > 0 ? "resume_used" : "course_started", {
-                  course_slug: course.slug,
-                  course_title: course.title,
-                  continue_url: continueLearningUrl,
-                  progress_percentage: progressPercentage,
-                  source: "course_hero",
-                });
-              }}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#E05A36] px-6 py-3.5 text-sm sm:text-base font-medium text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:bg-[#C2410C] hover:shadow-lg active:scale-[0.99] cursor-pointer"
+              prefetch={true}
+              onClick={handleStartCourse}
+              className={`inline-flex items-center gap-2 rounded-xl bg-[#E05A36] px-6 py-3.5 text-sm sm:text-base font-medium text-white shadow-md shadow-orange-500/20 transition-all duration-200 hover:bg-[#C2410C] hover:shadow-lg active:scale-[0.99] ${
+                isNavigating ? "opacity-80 pointer-events-none cursor-wait" : "cursor-pointer"
+              }`}
             >
-              <span>{ctaLabel}</span>
-              <CtaIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2} />
+              {isNavigating ? (
+                <>
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                  <span>Loading Lesson...</span>
+                </>
+              ) : (
+                <>
+                  <span>{ctaLabel}</span>
+                  <CtaIcon className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2} />
+                </>
+              )}
             </Link>
 
             <BookmarkButton
